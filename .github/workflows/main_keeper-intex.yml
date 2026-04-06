@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 env:
-  PROJECT_PATH: api/api/api.csproj
+  PROJECT_PATH: api/src/api.csproj
   PUBLISH_DIR: ./publish
 
 jobs:
