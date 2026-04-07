@@ -13,21 +13,12 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddSingleton<TokenService>();
 
-var mlBaseUrl = builder.Configuration["MlService:BaseUrl"] ?? "";
-var mlTimeout = int.TryParse(builder.Configuration["MlService:TimeoutSeconds"], out var t) ? t : 30;
-
-if (!string.IsNullOrWhiteSpace(mlBaseUrl))
+builder.Services.AddHttpClient("ml-pipelines", client =>
 {
-    builder.Services.AddHttpClient<MlClientService>(client =>
-    {
-        client.BaseAddress = new Uri(mlBaseUrl);
-        client.Timeout = TimeSpan.FromSeconds(mlTimeout);
-    });
-}
-else
-{
-    builder.Services.AddHttpClient<MlClientService>();
-}
+    var baseUrl = builder.Configuration["MLPipelines:BaseUrl"] ?? "http://localhost:8000";
+    client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
+    client.Timeout = TimeSpan.FromSeconds(120); // training can take a moment
+});
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
