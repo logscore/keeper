@@ -1,3 +1,1 @@
-from app.schemas.retention import RetentionFeatures, RetentionPrediction
-
-__all__ = ["RetentionFeatures", "RetentionPrediction"]
+# Schema modules — imported directly by routers.
