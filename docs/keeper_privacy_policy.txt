@@ -1,0 +1,140 @@
+KEEPER — PRIVACY POLICY & COOKIE NOTICE
+Last Updated: April 7, 2026
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PRIVACY POLICY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. WHO WE ARE
+
+Keeper ("we," "us," or "our") is the data controller responsible for your personal data. If you have questions about this policy or how we handle your data, contact us at:
+
+  Email: privacy@keeper.com
+  Address: 430 W University Pkwy, Provo, UT 84604, United States
+
+2. WHAT DATA WE COLLECT
+
+We may collect the following categories of personal data:
+
+  - Identity data: name, username, or similar identifiers
+  - Contact data: email address, phone number, mailing address
+  - Account data: login credentials, preferences, and settings
+  - Usage data: pages visited, features used, time spent, and clickstream data
+  - Device data: IP address, browser type, operating system
+  - Communications: messages or support requests you send us
+  - Cookie data: see the Cookie Notice below for full details
+
+We do not intentionally collect sensitive personal data (e.g., health, financial, or biometric data) unless explicitly required and consented to.
+
+3. HOW WE COLLECT YOUR DATA
+
+  - Directly from you when you register, contact us, or use our services
+  - Automatically through cookies and tracking technologies
+  - From third-party services you connect to your Keeper account
+
+4. WHY WE PROCESS YOUR DATA (LEGAL BASES)
+
+We only process your data when we have a lawful basis to do so under GDPR Article 6:
+
+  a. Contract performance — to provide, maintain, and improve our services
+  b. Legal obligation — to comply with applicable laws and regulations
+  c. Legitimate interests — to protect security, prevent fraud, and improve our product,
+     where those interests are not overridden by your rights
+  d. Consent — for marketing communications and non-essential cookies (you may withdraw
+     consent at any time)
+
+5. HOW LONG WE KEEP YOUR DATA
+
+We retain personal data only as long as necessary for the purposes described above or as required by law. Account data is retained for the duration of your account and deleted within 90 days of account closure, unless legal obligations require longer retention.
+
+6. WHO WE SHARE YOUR DATA WITH
+
+We do not sell your personal data. We may share it with:
+
+  - Service providers acting as data processors (e.g., hosting, analytics, email delivery)
+  - Legal authorities when required by law or to protect rights and safety
+  - Successors in the event of a merger, acquisition, or asset sale
+
+All third-party processors are bound by data processing agreements and are required to handle your data in accordance with GDPR.
+
+7. INTERNATIONAL TRANSFERS
+
+Because Keeper operates globally, your data may be processed in countries outside your own, including countries that may not have equivalent data protection laws. Where this occurs, we rely on appropriate safeguards such as Standard Contractual Clauses (SCCs) approved by the European Commission to ensure your data remains protected.
+
+8. YOUR RIGHTS UNDER GDPR
+
+You have the following rights regarding your personal data:
+
+  - Access: request a copy of the data we hold about you
+  - Rectification: request correction of inaccurate or incomplete data
+  - Erasure: request deletion of your data ("right to be forgotten")
+  - Restriction: request that we limit how we process your data
+  - Portability: receive your data in a structured, machine-readable format
+  - Objection: object to processing based on legitimate interests or for direct marketing
+  - Withdraw consent: at any time, where processing is based on consent
+
+To exercise any of these rights, contact us at privacy@keeper.com. We will respond within 30 days. You also have the right to lodge a complaint with your local data protection authority.
+
+9. DATA SECURITY
+
+We implement appropriate technical and organizational measures to protect your data against unauthorized access, loss, or disclosure. No method of transmission over the internet is 100% secure, and we cannot guarantee absolute security.
+
+10. CHANGES TO THIS POLICY
+
+We may update this Privacy Policy from time to time. We will notify you of significant changes by email or through a notice on our platform. Continued use of our services after changes take effect constitutes acceptance of the updated policy.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+COOKIE NOTICE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. WHAT ARE COOKIES?
+
+Cookies are small text files placed on your device when you visit a website. They help the site remember information about your visit — such as your preferences or login status — and can be used to understand how the site is used.
+
+2. COOKIE CONSENT
+
+Under GDPR, we are required to obtain your explicit consent before placing any non-essential cookies on your device. When you first visit Keeper, a cookie consent banner will appear. You may:
+
+  - Accept all cookies
+  - Reject non-essential cookies
+  - Customize your preferences by category
+
+Your choice is saved and applied immediately. You can update your preferences at any time via the Cookie Settings link in the site footer.
+
+3. WHAT COOKIES WE USE
+
+  STRICTLY NECESSARY COOKIES
+  Required for our services to function. These cannot be disabled.
+  Examples: session tokens, authentication cookies, security cookies
+  Legal basis: Contract performance / legitimate interests
+
+  FUNCTIONAL COOKIES
+  Remember your preferences and settings to improve your experience.
+  Examples: language preference, theme selection
+  Legal basis: Consent
+
+  ANALYTICS COOKIES
+  Help us understand how visitors interact with Keeper so we can improve it.
+  Examples: page view counts, session duration, error tracking
+  Legal basis: Consent
+
+4. THIRD-PARTY COOKIES
+
+Some cookies are placed by third-party services we use (e.g., analytics providers). These parties operate under their own privacy policies, which we encourage you to review.
+
+5. HOW TO CONTROL COOKIES IN YOUR BROWSER
+
+You can view, block, or delete cookies through your browser settings at any time. Note that disabling certain cookies may affect site functionality.
+
+  - Chrome: Settings > Privacy and Security > Cookies
+  - Firefox: Settings > Privacy & Security > Cookies and Site Data
+  - Safari: Preferences > Privacy > Manage Website Data
+  - Edge: Settings > Cookies and Site Permissions
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+For questions or data requests:
+privacy@keeper.com
+430 W University Pkwy, Provo, UT 84604, United States
+
+© 2026 Keeper. All rights reserved.
