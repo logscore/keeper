@@ -1,4 +1,4 @@
-"""Load social engagement regression Pipeline; feature row shape matches social_media.ipynb Phase 3."""
+"""Load social engagement regression Pipeline; row shape matches social_media_engagement_increase.ipynb Phase 3 (pre-post features only)."""
 
 from __future__ import annotations
 
@@ -9,19 +9,12 @@ import pandas as pd
 
 from app.config import social_engagement_pipeline_path
 
-# Must match FEATURES_BASE_NUMERIC + FEATURES_BASE_CATEGORICAL in social_media.ipynb
+# Must match FEATURES_ENGAGEMENT_MODEL in social_media_engagement_increase.ipynb
+# (not FEATURES_REFERRAL_MODEL — no impressions/likes/reach; those would leak the target.)
 SOCIAL_NUMERIC_FEATURES = [
-    "impressions",
-    "reach",
-    "likes",
-    "comments",
-    "shares",
-    "saves",
-    "click_throughs",
     "caption_length",
     "num_hashtags",
     "mentions_count",
-    "video_views",
     "boost_budget_php",
     "follower_count_at_post",
     "post_hour",
@@ -46,7 +39,7 @@ def load_social_engagement_pipeline(path: Path | None = None):
     if not p.is_file():
         raise FileNotFoundError(
             f"Social engagement pipeline not found at {p}. "
-            "Run social_media.ipynb Phase 6 or set SOCIAL_ENGAGEMENT_PIPELINE_PATH."
+            "Run social_media_engagement_increase.ipynb Phase 6 or set SOCIAL_ENGAGEMENT_PIPELINE_PATH."
         )
     return joblib.load(p)
 

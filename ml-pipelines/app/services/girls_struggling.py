@@ -54,7 +54,7 @@ def load_girls_struggling_pipeline(path: Path | None = None):
     if not p.is_file():
         raise FileNotFoundError(
             f"Girls struggling pipeline not found at {p}. "
-            "Train girls_struggling.ipynb Phase 6 or set GIRLS_STRUGGLING_PIPELINE_PATH."
+            "Save a trained classifier to this path or set GIRLS_STRUGGLING_PIPELINE_PATH."
         )
     return joblib.load(p)
 

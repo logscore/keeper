@@ -18,8 +18,8 @@ def girls_struggling_predict(request: Request, body: GirlsStrugglingFeatures):
         raise HTTPException(
             status_code=503,
             detail=(
-                "Girls struggling pipeline not loaded. Run girls_struggling.ipynb Phase 6 "
-                "or set GIRLS_STRUGGLING_PIPELINE_PATH."
+                "Girls struggling pipeline not loaded. Save a trained classifier to "
+                "pipelines/girls_struggling_pipeline_v1.sav or set GIRLS_STRUGGLING_PIPELINE_PATH."
             ),
         )
 

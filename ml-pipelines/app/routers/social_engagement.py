@@ -18,8 +18,8 @@ def social_engagement_predict(request: Request, body: SocialEngagementFeatures):
         raise HTTPException(
             status_code=503,
             detail=(
-                "Social engagement pipeline not loaded. Run social_media.ipynb Phase 6 "
-                "or set SOCIAL_ENGAGEMENT_PIPELINE_PATH."
+                "Social engagement pipeline not loaded. Run social_media_engagement_increase.ipynb "
+                "Phase 6 or set SOCIAL_ENGAGEMENT_PIPELINE_PATH."
             ),
         )
 

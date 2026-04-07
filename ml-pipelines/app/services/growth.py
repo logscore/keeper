@@ -26,7 +26,7 @@ def load_growth_pipeline(path: Path | None = None):
     if not p.is_file():
         raise FileNotFoundError(
             f"Growth pipeline not found at {p}. "
-            "Train donor_growth.ipynb Phase 6 or set GROWTH_PIPELINE_PATH."
+            "Run donor_growth.ipynb Phase 6 or set GROWTH_PIPELINE_PATH."
         )
     return joblib.load(p)
 

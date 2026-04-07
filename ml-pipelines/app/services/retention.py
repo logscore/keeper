@@ -26,7 +26,7 @@ def load_retention_pipeline(path: Path | None = None):
     if not p.is_file():
         raise FileNotFoundError(
             f"Retention pipeline not found at {p}. "
-            "Train in the notebook (Phase 6) or set RETENTION_PIPELINE_PATH."
+            "Run donor_retention.ipynb Phase 6 or set RETENTION_PIPELINE_PATH."
         )
     return joblib.load(p)
 

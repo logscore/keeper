@@ -2,19 +2,11 @@ from pydantic import BaseModel, Field
 
 
 class SocialEngagementFeatures(BaseModel):
-    """Post-level features for engagement-rate prediction (matches social_media.ipynb Phase 3 order)."""
+    """Pre-post features for engagement_rate (matches social_media_engagement_increase.ipynb FEATURES_ENGAGEMENT_MODEL)."""
 
-    impressions: float = Field(0, ge=0)
-    reach: float = Field(0, ge=0)
-    likes: float = Field(0, ge=0)
-    comments: float = Field(0, ge=0)
-    shares: float = Field(0, ge=0)
-    saves: float = Field(0, ge=0)
-    click_throughs: float = Field(0, ge=0)
     caption_length: float = Field(0, ge=0)
     num_hashtags: float = Field(0, ge=0)
     mentions_count: float = Field(0, ge=0)
-    video_views: float = Field(0, ge=0)
     boost_budget_php: float = Field(0, ge=0)
     follower_count_at_post: float = Field(0, ge=0)
     post_hour: int = Field(0, ge=0, le=23)

@@ -15,7 +15,13 @@ def retention_feature_schema():
 def retention_predict(request: Request, body: RetentionFeatures):
     pipeline = getattr(request.app.state, "retention_pipeline", None)
     if pipeline is None:
-        raise HTTPException(status_code=503, detail="Pipeline not loaded")
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Retention pipeline not loaded. Run donor_retention.ipynb Phase 6, "
+                "place retention_pipeline_v1.sav under pipelines/, or set RETENTION_PIPELINE_PATH."
+            ),
+        )
 
     row = body.model_dump()
     try:
