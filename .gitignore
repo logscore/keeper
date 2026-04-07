@@ -85,3 +85,6 @@ dist/
 
 # Python / notebooks
 .ipynb_checkpoints/
+
+# IMPORTANT: DO NOT COMMIT OR DELETE THE LIGHTHOUSE CSV FILES
+lighthouse_csv_v7/
