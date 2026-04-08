@@ -9,7 +9,7 @@ export const Route = createFileRoute("/work")({
 
 function WorkPage() {
   return (
-    <div className="min-h-screen bg-background font-body flex flex-col pt-16">
+    <div className="min-h-screen bg-background font-body flex flex-col">
       <Navbar />
       <main className="flex-1 flex flex-col pt-12 pb-24">
         <div className="max-w-7xl mx-auto px-6 w-full mb-12 flex flex-col items-center">

@@ -6,7 +6,9 @@ import { useState } from "react";
 const amounts = [25, 50, 100, 250, 500];
 
 export default function DonateSection() {
-  const [selectedAmount, setSelectedAmount] = useState<number | "custom" | null>(50);
+  const [selectedAmount, setSelectedAmount] = useState<
+    number | "custom" | null
+  >(50);
 
   return (
     <section id="donate" className="py-24 bg-background">
@@ -24,9 +26,11 @@ export default function DonateSection() {
             Your Generous Donations Create Safe Destinations.
           </h2>
           <p className="font-body text-base text-muted-foreground leading-relaxed mb-10 px-4 text-balance">
-            We depend entirely on donations to operate. Every contribution directly funds
-            shelter, food, counseling, education, and a new beginning for a survivor.
+            We depend entirely on donations to operate. Every contribution
+            directly funds shelter, food, counseling, education, and a new
+            beginning for a survivor.
           </p>
+          <br />
 
           <div className="flex flex-wrap justify-center gap-3 mb-8">
             {amounts.map((amt) => (
@@ -61,11 +65,11 @@ export default function DonateSection() {
             <Heart className="h-5 w-5" />
             Donate Now
           </Button>
-
+          <br />
+          <br />
           <p className="font-body text-xs text-muted-foreground mt-6">
-            Keeper is a registered 501(c)(3) nonprofit. All donations are tax-deductible.
-            <br />
-            EIN: 12-3456789
+            Keeper is a registered 501(c)(3) nonprofit. All donations are
+            tax-deductible. EIN: 12-3456789
           </p>
         </motion.div>
       </div>

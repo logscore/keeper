@@ -9,7 +9,7 @@ export const Route = createFileRoute("/about")({
 
 function AboutPage() {
   return (
-    <div className="min-h-screen bg-background font-body flex flex-col pt-16">
+    <div className="min-h-screen bg-background font-body flex flex-col">
       <Navbar />
       <main className="flex-1 flex flex-col justify-center">
         <AboutSection />

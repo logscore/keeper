@@ -67,7 +67,6 @@ export default function ImpactStats() {
             Measurable Change, Real Lives
           </h2>
         </div>
-
         <div className="grid md:grid-cols-3 gap-12">
           {stats.map((stat, i) => (
             <motion.div

@@ -8,7 +8,7 @@ export const Route = createFileRoute("/contact")({
 
 function ContactPage() {
   return (
-    <div className="min-h-screen bg-background font-body flex flex-col pt-16">
+    <div className="min-h-screen bg-background font-body flex flex-col">
       <Navbar />
       <main className="flex-1 flex flex-col justify-end">
         {/* We use LandingFooter as an actual page block since it covers our contact/legal details */}

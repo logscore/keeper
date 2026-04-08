@@ -1,10 +1,30 @@
 import { Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Heart } from "lucide-react";
 
 import logoImg from "@/assets/logo.png";
 
+const apiBaseUrl =
+  (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
+  "http://localhost:5216";
+
+async function fetchCurrentUser() {
+  const res = await fetch(`${apiBaseUrl}/api/auth/me`, {
+    credentials: "include",
+  });
+  if (!res.ok) return null;
+  return res.json() as Promise<{ email: string; username: string }>;
+}
+
 export default function Navbar() {
+  const { data: user } = useQuery({
+    queryKey: ["auth", "me"],
+    queryFn: fetchCurrentUser,
+    retry: false,
+    staleTime: 60_000,
+  });
+
   return (
     <header className="sticky top-0 left-0 right-0 z-50 flex flex-col w-full shadow-sm">
       <nav className="bg-white/95 backdrop-blur-md border-b border-border w-full">
@@ -32,11 +52,13 @@ export default function Navbar() {
         </div>
 
         <div className="flex items-center gap-3">
-          <Link to="/donor">
-            <Button variant="ghost" size="sm" className="font-body text-sm">
-              Log In
-            </Button>
-          </Link>
+          {!user && (
+            <Link to="/signup">
+              <Button variant="ghost" size="sm" className="font-body text-sm">
+                Sign Up
+              </Button>
+            </Link>
+          )}
           <Link to="/" hash="donate">
             <Button size="sm" className="font-body text-sm gap-2 bg-primary hover:bg-primary/90">
               <Heart className="h-4 w-4" />

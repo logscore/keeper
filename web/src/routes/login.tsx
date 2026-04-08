@@ -80,8 +80,8 @@ function Login() {
             alt="Two girls smiling"
             className="h-full w-full object-cover object-top"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
-          <div className="absolute bottom-10 left-8 right-8 text-white">
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent" />
+          <div className="absolute bottom-20 left-8 right-8 text-white">
             <p className="font-heading text-2xl font-bold leading-snug">
               Your generosity
               <br />
@@ -92,10 +92,10 @@ function Login() {
               are survivors of abuse and trafficking in the Philippines.
             </p>
             <Link
-              to="/"
+              to="/work"
               className="mt-4 inline-block rounded-lg bg-white/15 backdrop-blur-sm border border-white/30 px-4 py-2 font-body text-sm font-medium text-white hover:bg-white/25 transition-colors"
             >
-              Learn about how we make a difference →
+              See how we help people →
             </Link>
           </div>
         </div>
