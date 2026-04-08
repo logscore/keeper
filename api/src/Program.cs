@@ -16,7 +16,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddHttpClient<MlClientService>(client =>
 {
-    var baseUrl = builder.Configuration["MLPipelines:BaseUrl"] ?? "http://localhost:8000";
+    var baseUrl = builder.Configuration["MLPipelines:BaseUrl"]
+        ?? throw new InvalidOperationException("MLPipelines:BaseUrl is not configured.");
     client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
     client.Timeout = TimeSpan.FromSeconds(120);
 });
@@ -87,7 +88,7 @@ builder.Services.AddRateLimiter(options =>
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     options.AddFixedWindowLimiter("auth", limiterOptions =>
     {
-        limiterOptions.PermitLimit = 5;
+        limiterOptions.PermitLimit = 50;
         limiterOptions.Window = TimeSpan.FromMinutes(1);
         limiterOptions.QueueLimit = 0;
     });
@@ -140,13 +141,41 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// UseCors must be first so CORS headers are written before any other middleware
+// can short-circuit or throw — otherwise a controller exception produces a 500
+// with no Access-Control-Allow-Origin header and the browser reports a CORS error
+// even though the request reached the server.
+app.UseCors(FrontendCorsPolicy);
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseHsts();
+
+    // Catch unhandled controller exceptions in production. Placed after UseCors
+    // so CORS headers are already on the response when this writes the error body.
+    app.Use(async (context, next) =>
+    {
+        try
+        {
+            await next(context);
+        }
+        catch (Exception ex)
+        {
+            context.RequestServices
+                .GetRequiredService<ILogger<Program>>()
+                .LogError(ex, "Unhandled exception on {Method} {Path}", context.Request.Method, context.Request.Path);
+
+            if (!context.Response.HasStarted)
+            {
+                context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsJsonAsync(new { error = "An unexpected error occurred." });
+            }
+        }
+    });
 }
 
 app.UseHttpsRedirection();
-app.UseCors(FrontendCorsPolicy);
 app.UseRateLimiter();
 
 app.UseAuthentication();

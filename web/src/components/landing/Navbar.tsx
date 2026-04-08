@@ -4,10 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Heart } from "lucide-react";
 
 import logoImg from "@/assets/logo.png";
+import { getApiBaseUrl } from "../../lib/api";
 
-const apiBaseUrl =
-  (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
-  "http://localhost:5216";
+const apiBaseUrl = getApiBaseUrl();
+
+if (!apiBaseUrl) {
+  throw new Error("API base URL not configured");
+}
 
 async function fetchCurrentUser() {
   const res = await fetch(`${apiBaseUrl}/api/auth/me`, {
@@ -49,13 +52,18 @@ export default function Navbar() {
     <header className="sticky top-0 left-0 right-0 z-50 flex flex-col w-full shadow-sm">
       <nav className="bg-white/95 backdrop-blur-md border-b border-border w-full">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-3">
-          <img src={logoImg} alt="Keeper Logo" className="h-9 w-9 rounded-lg object-cover" />
-          <span className="font-heading text-xl font-semibold text-foreground tracking-tight">
-            Keeper
-          </span>
-        </Link>
+          <Link to="/" className="flex items-center gap-3">
+            <img
+              src={logoImg}
+              alt="Keeper Logo"
+              className="h-9 w-9 rounded-lg object-cover"
+            />
+            <span className="font-heading text-xl font-semibold text-foreground tracking-tight">
+              Keeper
+            </span>
+          </Link>
 
+<<<<<<< HEAD
         <div className="hidden md:flex items-center gap-8">
           <Link to="/" className="text-sm font-body font-medium text-muted-foreground hover:text-yellow-600 transition-colors [&.active]:text-yellow-600 [&.active]:font-semibold">
             Home
@@ -70,28 +78,75 @@ export default function Navbar() {
             Contact
           </Link>
         </div>
+=======
+          <div className="hidden md:flex items-center gap-8">
+            <Link
+              to="/"
+              className="text-sm font-body font-medium text-muted-foreground hover:text-foreground transition-colors [&.active]:text-foreground [&.active]:font-semibold"
+            >
+              Home
+            </Link>
+            <Link
+              to="/work"
+              className="text-sm font-body font-medium text-muted-foreground hover:text-foreground transition-colors [&.active]:text-foreground [&.active]:font-semibold"
+            >
+              Our Work
+            </Link>
+            <Link
+              to="/about"
+              className="text-sm font-body font-medium text-muted-foreground hover:text-foreground transition-colors [&.active]:text-foreground [&.active]:font-semibold"
+            >
+              About
+            </Link>
+            <Link
+              to="/contact"
+              className="text-sm font-body font-medium text-muted-foreground hover:text-foreground transition-colors [&.active]:text-foreground [&.active]:font-semibold"
+            >
+              Contact
+            </Link>
+          </div>
+>>>>>>> origin/main
 
-        <div className="flex items-center gap-3">
-          {user ? (
-            <Button variant="ghost" size="sm" className="font-body text-sm" onClick={() => signOut()}>
-              Sign Out
-            </Button>
-          ) : (
-            <Link to="/signup">
-              <Button variant="ghost" size="sm" className="font-body text-sm">
-                Sign Up
+          <div className="flex items-center gap-3">
+            {user ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="font-body text-sm"
+                onClick={() => signOut()}
+              >
+                Sign Out
+              </Button>
+            ) : (
+              <Link to="/signup">
+                <Button variant="ghost" size="sm" className="font-body text-sm">
+                  Sign Up
+                </Button>
+              </Link>
+            )}
+            <Link to="/" hash="donate">
+              <Button
+                size="sm"
+                className="font-body text-sm gap-2 bg-primary hover:bg-primary/90"
+              >
+                <Heart className="h-4 w-4" />
+                Donate
               </Button>
             </Link>
-          )}
-          <Link to="/" hash="donate">
-            <Button size="sm" className="font-body text-sm gap-2 bg-yellow-500 hover:bg-yellow-600 text-black">
-              <Heart className="h-4 w-4" />
-              Donate
-            </Button>
-          </Link>
-        </div>
-      </div>
-      </nav>
-    </header>
+<<<<<<< HEAD
+          )
+}
+<Link to="/" hash="donate">
+  <Button size="sm" className="font-body text-sm gap-2 bg-yellow-500 hover:bg-yellow-600 text-black">
+    <Heart className="h-4 w-4" />
+    Donate
+  </Button>
+</Link>
+=======
+          </div>
+>>>>>>> origin/main
+        </div >
+      </nav >
+    </header >
   );
 }
