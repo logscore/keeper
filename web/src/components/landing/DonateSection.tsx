@@ -37,10 +37,10 @@ export default function DonateSection() {
               <button
                 key={amt}
                 onClick={() => setSelectedAmount(amt)}
-                className={`font-body text-base font-semibold px-6 py-3 rounded-xl border-2 transition-all duration-200 ${
+                className={`font-body font-semibold px-6 py-3 rounded-xl border-2 transition-all duration-200 ${
                   selectedAmount === amt
-                    ? "border-accent bg-accent/10 text-accent shadow-sm"
-                    : "border-border hover:border-accent/50 hover:bg-accent/5 text-foreground"
+                    ? "border-accent bg-accent text-accent-foreground shadow-sm"
+                    : "border-border hover:border-accent/50 hover:bg-accent/5 text-primary"
                 }`}
               >
                 ${amt}
@@ -50,8 +50,8 @@ export default function DonateSection() {
               onClick={() => setSelectedAmount("custom")}
               className={`font-body text-base font-semibold px-6 py-3 rounded-xl border-2 transition-all duration-200 ${
                 selectedAmount === "custom"
-                  ? "border-accent bg-accent/10 text-accent shadow-sm"
-                  : "border-border hover:border-accent/50 hover:bg-accent/5 text-foreground"
+                  ? "border-accent bg-accent/10 text-primary shadow-sm"
+                  : "border-border hover:border-accent/50 hover:bg-accent/5 text-primary"
               }`}
             >
               Custom
@@ -67,7 +67,7 @@ export default function DonateSection() {
           </Button>
           <br />
           <br />
-          <p className="font-body text-xs text-muted-foreground mt-6">
+          <p className="font-body text-xs text-primary mt-6">
             Keeper is a registered 501(c)(3) nonprofit. All donations are
             tax-deductible. EIN: 12-3456789
           </p>

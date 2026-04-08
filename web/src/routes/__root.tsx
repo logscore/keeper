@@ -7,10 +7,12 @@ import {
 import Navbar from "@/components/landing/Navbar";
 import LandingFooter from "@/components/landing/LandingFooter";
 import { Button } from "@/components/ui/button";
+import CookieBanner from "@/components/ui/cookie-banner";
 
 const RootLayout = () => (
   <div className="min-h-screen bg-background text-foreground">
     <Outlet />
+    <CookieBanner />
   </div>
 );
 
