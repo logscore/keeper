@@ -123,6 +123,7 @@ function Login() {
                 ? "Enter the code we emailed you to finish signing in."
                 : "Enter your email and password to continue."}
             </p>
+            <br />
 
             {challenge ? (
               <CodeChallengeForm

@@ -132,6 +132,7 @@ function Signup() {
                 ? "Enter the code we emailed you to finish signing up."
                 : "Enter your details to get started."}
             </p>
+            <br />
 
             {challenge ? (
               <CodeChallengeForm

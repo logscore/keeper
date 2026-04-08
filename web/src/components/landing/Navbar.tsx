@@ -1,5 +1,5 @@
-import { Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Heart } from "lucide-react";
 
@@ -17,12 +17,32 @@ async function fetchCurrentUser() {
   return res.json() as Promise<{ email: string; username: string }>;
 }
 
+async function logout() {
+  const res = await fetch(`${apiBaseUrl}/api/auth/logout`, {
+    method: "POST",
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("Logout failed");
+}
+
 export default function Navbar() {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
   const { data: user } = useQuery({
     queryKey: ["auth", "me"],
     queryFn: fetchCurrentUser,
     retry: false,
     staleTime: 60_000,
+  });
+
+  const { mutate: signOut } = useMutation({
+    mutationFn: logout,
+    onSettled: () => {
+      queryClient.setQueryData(["auth", "me"], null);
+      queryClient.invalidateQueries({ queryKey: ["auth"] });
+      navigate({ to: "/" });
+    },
   });
 
   return (
@@ -52,7 +72,11 @@ export default function Navbar() {
         </div>
 
         <div className="flex items-center gap-3">
-          {!user && (
+          {user ? (
+            <Button variant="ghost" size="sm" className="font-body text-sm" onClick={() => signOut()}>
+              Sign Out
+            </Button>
+          ) : (
             <Link to="/signup">
               <Button variant="ghost" size="sm" className="font-body text-sm">
                 Sign Up
