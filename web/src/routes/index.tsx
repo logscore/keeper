@@ -5,6 +5,7 @@ import ImpactStats from "@/components/landing/ImpactStats";
 import type { ImpactStatsData } from "@/components/landing/ImpactStats";
 import AboutSection from "@/components/landing/AboutSection";
 import DonateSection from "@/components/landing/DonateSection";
+import MoneyFlow from "@/components/landing/MoneyFlow";
 import LandingFooter from "@/components/landing/LandingFooter";
 
 export const Route = createFileRoute("/")({
@@ -19,12 +20,17 @@ const landingImpactStats: ImpactStatsData = {
 
 function Landing() {
   return (
-    <div className="min-h-screen bg-background font-body">
+    <div className="min-h-screen bg-background font-body flex flex-col">
       <Navbar />
       <HeroSection />
       <ImpactStats stats={landingImpactStats} />
       <AboutSection />
       <DonateSection />
+      <main className="flex-1">
+        <HeroSection />
+        <DonateSection />
+        <MoneyFlow />
+      </main>
       <LandingFooter />
     </div>
   );

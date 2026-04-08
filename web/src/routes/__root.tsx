@@ -7,32 +7,12 @@ import {
 import Navbar from "@/components/landing/Navbar";
 import LandingFooter from "@/components/landing/LandingFooter";
 import { Button } from "@/components/ui/button";
+import CookieBanner from "@/components/ui/cookie-banner";
 
 const RootLayout = () => (
   <div className="min-h-screen bg-background text-foreground">
-    <nav className="mx-auto flex w-full max-w-4xl gap-6 border-b px-6 py-4">
-      <div>
-        <Link
-          to="/"
-          className="text-sm font-medium text-muted-foreground [&.active]:text-foreground"
-        >
-          Home
-        </Link>
-      </div>
-      <Link
-        to="/login"
-        className="text-sm font-medium text-muted-foreground [&.active]:text-foreground"
-      >
-        Login
-      </Link>
-      <Link
-        to="/signup"
-        className="text-sm font-medium text-muted-foreground [&.active]:text-foreground"
-      >
-        Sign up
-      </Link>
-    </nav>
     <Outlet />
+    <CookieBanner />
   </div>
 );
 

@@ -80,7 +80,7 @@ function Signup() {
   return (
     <div className="fixed inset-0 font-body">
       <Navbar />
-      <div className="flex h-full">
+      <div className="flex h-[calc(100vh-4rem)]">
         {/* Left — image panel, starts from top and goes behind the navbar */}
         <div className="relative hidden lg:flex lg:w-[45%]">
           <img
@@ -88,8 +88,8 @@ function Signup() {
             alt="Two girls smiling"
             className="h-full w-full object-cover object-top"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
-          <div className="absolute bottom-10 left-8 right-8 text-white">
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent" />
+          <div className="absolute bottom-20 left-8 right-8 text-white">
             <p className="font-heading text-2xl font-bold leading-snug">
               Your generosity
               <br />
@@ -100,18 +100,18 @@ function Signup() {
               are survivors of abuse and trafficking in the Philippines.
             </p>
             <Link
-              to="/"
+              to="/about"
               className="mt-4 inline-block rounded-lg bg-white/15 backdrop-blur-sm border border-white/30 px-4 py-2 font-body text-sm font-medium text-white hover:bg-white/25 transition-colors"
             >
-              Learn more about our mission →
+              Learn more about us →
             </Link>
           </div>
         </div>
 
         {/* Right — form panel */}
         {/* Right — form panel, padded so content clears the navbar */}
-        <div className="flex w-full flex-col items-center justify-center bg-slate-100 px-8 pt-16 lg:w-[55%]">
-          <div className="w-full max-w-xs rounded-2xl border border-border bg-background p-8 shadow-sm">
+        <div className="flex w-full flex-col items-center justify-center bg-slate-100 px-8 lg:w-[55%]">
+          <div className="w-full max-w-sm rounded-2xl border border-border bg-background p-8 shadow-sm">
             {/* Logo */}
             <Link to="/" className="mb-6 flex items-center gap-2.5">
               <img
@@ -132,6 +132,7 @@ function Signup() {
                 ? "Enter the code we emailed you to finish signing up."
                 : "Enter your details to get started."}
             </p>
+            <br />
 
             {challenge ? (
               <CodeChallengeForm
@@ -152,7 +153,6 @@ function Signup() {
             ) : (
               <form className="space-y-4" onSubmit={handleSubmit}>
                 <div className="grid gap-2">
-                  <br />
                   <Label htmlFor="username" className="font-body">
                     Username
                   </Label>
