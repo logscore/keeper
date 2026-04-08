@@ -23,6 +23,7 @@ import { Route as CaseloadRouteImport } from './routes/caseload'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SignupVerifyRouteImport } from './routes/signup.verify'
 
 const WorkRoute = WorkRouteImport.update({
   id: '/work',
@@ -94,6 +95,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SignupVerifyRoute = SignupVerifyRouteImport.update({
+  id: '/verify',
+  path: '/verify',
+  getParentRoute: () => SignupRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -110,6 +116,7 @@ export interface FileRoutesByFullPath {
   '/reports': typeof ReportsRoute
   '/signup': typeof SignupRoute
   '/work': typeof WorkRoute
+  '/signup/verify': typeof SignupVerifyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -126,6 +133,7 @@ export interface FileRoutesByTo {
   '/reports': typeof ReportsRoute
   '/signup': typeof SignupRoute
   '/work': typeof WorkRoute
+  '/signup/verify': typeof SignupVerifyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -143,6 +151,7 @@ export interface FileRoutesById {
   '/reports': typeof ReportsRoute
   '/signup': typeof SignupRoute
   '/work': typeof WorkRoute
+  '/signup/verify': typeof SignupVerifyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -161,6 +170,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/signup'
     | '/work'
+    | '/signup/verify'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -177,6 +187,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/signup'
     | '/work'
+    | '/signup/verify'
   id:
     | '__root__'
     | '/'
@@ -193,6 +204,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/signup'
     | '/work'
+    | '/signup/verify'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -312,8 +324,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/signup/verify': {
+      id: '/signup/verify'
+      path: '/verify'
+      fullPath: '/signup/verify'
+      preLoaderRoute: typeof SignupVerifyRouteImport
+      parentRoute: typeof SignupRoute
+    }
   }
 }
+
+interface SignupRouteChildren {
+  SignupVerifyRoute: typeof SignupVerifyRoute
+}
+
+const SignupRouteChildren: SignupRouteChildren = {
+  SignupVerifyRoute: SignupVerifyRoute,
+}
+
+const SignupRouteWithChildren =
+  SignupRoute._addFileChildren(SignupRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
