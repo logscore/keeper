@@ -27,12 +27,6 @@ export default function LandingFooter() {
             </h4>
             <div className="space-y-3">
               <a
-                href="mailto:info@keeper.org"
-                className="flex items-center gap-2 text-sm hover:text-white transition-colors"
-              >
-                <Mail className="h-4 w-4 text-yellow-500" /> info@keeper.org
-              </a>
-              <a
                 href="tel:+15551234567"
                 className="flex items-center gap-2 text-sm hover:text-white transition-colors"
               >
