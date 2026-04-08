@@ -81,10 +81,10 @@ export default function Navbar() {
               About
             </Link>
             <Link
-              to="/contact"
+              to={user ? "/dashboard" : "/login"}
               className="text-sm font-body font-medium text-muted-foreground hover:text-yellow-600 transition-colors [&.active]:text-yellow-600 [&.active]:font-semibold"
             >
-              Contact
+              Dashboard
             </Link>
           </div>
 
