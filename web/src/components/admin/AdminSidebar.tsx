@@ -1,4 +1,5 @@
-import { Link, useLocation } from "@tanstack/react-router";
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   LayoutDashboard,
@@ -10,6 +11,7 @@ import {
   LogOut,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { logout } from "@/lib/api";
 
 import logoImg from "@/assets/logo.png";
 
@@ -36,25 +38,31 @@ const navItems: NavItem[] = [
 
 export default function AdminSidebar({ user }: { user: User | null }) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const currentPath = location.pathname + location.searchStr;
 
   const initials = user?.full_name
     ? user.full_name.split(" ").map((n) => n[0]).join("").toUpperCase()
     : "A";
 
-  const handleLogout = () => {
-    // TODO: Call your C# API logout endpoint
-    console.log("Logout clicked — wire to your auth API");
-  };
+  const { mutate: handleLogout } = useMutation({
+    mutationFn: logout,
+    onSettled: () => {
+      queryClient.setQueryData(["auth", "me"], null);
+      queryClient.invalidateQueries({ queryKey: ["auth"] });
+      navigate({ to: "/" });
+    },
+  });
 
   return (
     <aside className="fixed left-0 top-0 bottom-0 w-64 bg-sidebar flex flex-col z-50">
-      <div className="p-5 flex items-center gap-3 border-b border-sidebar-border">
+      <Link to="/" className="p-5 flex items-center gap-3 border-b border-sidebar-border hover:opacity-80 transition-opacity">
         <img src={logoImg} alt="Keeper" className="h-9 w-9 rounded-lg" />
         <span className="font-heading text-lg font-semibold text-sidebar-foreground">
           Keeper
         </span>
-      </div>
+      </Link>
 
       <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
@@ -97,7 +105,7 @@ export default function AdminSidebar({ user }: { user: User | null }) {
             </div>
           </div>
           <button
-            onClick={handleLogout}
+            onClick={() => handleLogout()}
             className="p-1.5 rounded-lg text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
           >
             <LogOut className="h-4 w-4" />
