@@ -1,5 +1,4 @@
 import { Link } from "@tanstack/react-router";
-import { Phone, MapPin } from "lucide-react";
 
 import logoImg from "@/assets/logo.png";
 
