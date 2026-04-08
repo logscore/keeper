@@ -114,7 +114,7 @@ export interface FileRoutesByFullPath {
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/process-recordings': typeof ProcessRecordingsRoute
   '/reports': typeof ReportsRoute
-  '/signup': typeof SignupRoute
+  '/signup': typeof SignupRouteWithChildren
   '/work': typeof WorkRoute
   '/signup/verify': typeof SignupVerifyRoute
 }
@@ -131,7 +131,7 @@ export interface FileRoutesByTo {
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/process-recordings': typeof ProcessRecordingsRoute
   '/reports': typeof ReportsRoute
-  '/signup': typeof SignupRoute
+  '/signup': typeof SignupRouteWithChildren
   '/work': typeof WorkRoute
   '/signup/verify': typeof SignupVerifyRoute
 }
@@ -149,7 +149,7 @@ export interface FileRoutesById {
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/process-recordings': typeof ProcessRecordingsRoute
   '/reports': typeof ReportsRoute
-  '/signup': typeof SignupRoute
+  '/signup': typeof SignupRouteWithChildren
   '/work': typeof WorkRoute
   '/signup/verify': typeof SignupVerifyRoute
 }
@@ -220,7 +220,7 @@ export interface RootRouteChildren {
   PrivacyPolicyRoute: typeof PrivacyPolicyRoute
   ProcessRecordingsRoute: typeof ProcessRecordingsRoute
   ReportsRoute: typeof ReportsRoute
-  SignupRoute: typeof SignupRoute
+  SignupRoute: typeof SignupRouteWithChildren
   WorkRoute: typeof WorkRoute
 }
 
@@ -358,7 +358,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyPolicyRoute: PrivacyPolicyRoute,
   ProcessRecordingsRoute: ProcessRecordingsRoute,
   ReportsRoute: ReportsRoute,
-  SignupRoute: SignupRoute,
+  SignupRoute: SignupRouteWithChildren,
   WorkRoute: WorkRoute,
 }
 export const routeTree = rootRouteImport
