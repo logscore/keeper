@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import DonorNav from "@/components/donor/DonorNav";
 import DonorMetrics from "@/components/donor/DonorMetrics";
 import AllocationChart from "@/components/donor/AllocationChart";
@@ -17,6 +18,8 @@ export const Route = createFileRoute("/donor")({
 });
 
 function DonorDashboard() {
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
   const { data: user } = useQuery({
     queryKey: ["auth", "me"],
     queryFn: async () => {
@@ -112,7 +115,44 @@ function DonorDashboard() {
         <div className="mt-8">
           <DonationHistory donations={donations} />
         </div>
+
+        <div className="mt-10 flex justify-end">
+          <Button
+            onClick={() => setShowDeleteModal(true)}
+            variant="outline"
+            className="font-body border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600 hover:border-red-600 px-6 h-11 rounded-xl transition-all"
+          >
+            Delete Account
+          </Button>
+        </div>
       </main>
+
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-[#FDFBF7] rounded-2xl border border-border shadow-lg p-8 max-w-md w-full mx-4">
+            <h2 className="font-heading text-xl font-bold text-foreground mb-2">Delete Account</h2>
+            <p className="font-body text-base text-muted-foreground mb-6">
+              Are you sure you want to delete your account? This action cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteModal(false)}
+                className="font-body border-border text-foreground hover:bg-muted px-5 h-10 rounded-xl transition-all"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => setShowDeleteModal(false)}
+                className="font-body bg-red-500 hover:bg-red-600 text-white px-5 h-10 rounded-xl transition-all"
+              >
+                Confirm
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <DonorFooter />
     </div>
   );
