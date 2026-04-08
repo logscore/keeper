@@ -21,9 +21,11 @@ type AuthUserResponse = {
   roles: string[];
 };
 
-const apiBaseUrl =
-  (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
-  "http://localhost:5216";
+const apiBaseUrl = (() => {
+  const url = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
+  if (!url) throw new Error("VITE_API_BASE_URL is not set.");
+  return url;
+})();
 
 export const Route = createFileRoute("/login")({
   component: Login,
