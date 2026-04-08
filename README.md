@@ -66,7 +66,7 @@ docker compose up -d
 
 SQL Server 2022 runs on port `1433` with:
 - Username: `sa`
-- Password: `KeeperDev#2026!`
+- Password: see `MSSQL_SA_PASSWORD` in your `.env` file
 - Database: `keeper`
 
 #### 2. Backend (ASP.NET Core)
@@ -118,7 +118,7 @@ STOP_DB_ON_EXIT=false                     # set true to stop SQL container on Ct
 Backend configuration (via `appsettings.Development.json` or environment variables):
 
 ```
-ConnectionStrings__DefaultConnection=Server=localhost,1433;Database=keeper;User Id=sa;Password=KeeperDev#2026!;TrustServerCertificate=True;Encrypt=False
+ConnectionStrings__DefaultConnection=Server=localhost,1433;Database=keeper;User Id=sa;Password=<your-sa-password>;TrustServerCertificate=True;Encrypt=False
 MLPipelines__BaseUrl=http://localhost:8000
 Cors__AllowedOrigins__0=http://localhost:5173
 ```
