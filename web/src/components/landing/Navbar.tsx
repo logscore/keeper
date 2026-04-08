@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Heart } from "lucide-react";
 
 import logoImg from "@/assets/logo.png";
-import { getApiBaseUrl, type AuthMeResponse } from "../../lib/api";
+import { getApiBaseUrl, type AuthMeResponse, logout } from "../../lib/api";
 
 async function fetchCurrentUser(): Promise<AuthMeResponse | null> {
   const apiBaseUrl = getApiBaseUrl();
@@ -14,16 +14,6 @@ async function fetchCurrentUser(): Promise<AuthMeResponse | null> {
   });
   if (!res.ok) return null;
   return res.json() as Promise<AuthMeResponse>;
-}
-
-async function logout() {
-  const apiBaseUrl = getApiBaseUrl();
-  if (!apiBaseUrl) return;
-  const res = await fetch(`${apiBaseUrl}/api/auth/logout`, {
-    method: "POST",
-    credentials: "include",
-  });
-  if (!res.ok) throw new Error("Logout failed");
 }
 
 export default function Navbar() {

@@ -11,19 +11,9 @@ import {
   LogOut,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { getApiBaseUrl } from "@/lib/api";
+import { logout } from "@/lib/api";
 
 import logoImg from "@/assets/logo.png";
-
-async function logout() {
-  const apiBaseUrl = getApiBaseUrl();
-  if (!apiBaseUrl) return;
-  const res = await fetch(`${apiBaseUrl}/api/auth/logout`, {
-    method: "POST",
-    credentials: "include",
-  });
-  if (!res.ok) throw new Error("Logout failed");
-}
 
 interface User {
   full_name?: string;
@@ -115,7 +105,7 @@ export default function AdminSidebar({ user }: { user: User | null }) {
             </div>
           </div>
           <button
-            onClick={handleLogout}
+            onClick={() => handleLogout()}
             className="p-1.5 rounded-lg text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
           >
             <LogOut className="h-4 w-4" />
