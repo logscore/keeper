@@ -72,7 +72,7 @@ function Login() {
   return (
     <div className="fixed inset-0 font-body">
       <Navbar />
-      <div className="flex h-full">
+      <div className="flex h-[calc(100vh-4rem)]">
         {/* Left — image panel */}
         <div className="relative hidden lg:flex lg:w-[45%]">
           <img
@@ -101,7 +101,7 @@ function Login() {
         </div>
 
         {/* Right — form panel */}
-        <div className="flex w-full flex-col items-center justify-center bg-slate-100 px-8 pt-16 pb-12 lg:w-[55%]">
+        <div className="flex w-full flex-col items-center justify-center bg-slate-100 px-8 lg:w-[55%]">
           <div className="w-full max-w-xs rounded-2xl border border-border bg-background p-8 shadow-sm">
             {/* Logo */}
             <Link to="/" className="mb-6 flex items-center gap-2.5">
@@ -143,7 +143,6 @@ function Login() {
             ) : (
               <form className="space-y-4" onSubmit={handleSubmit}>
                 <div className="grid gap-2">
-                  <br />
                   <Label htmlFor="email" className="font-body">
                     Email
                   </Label>

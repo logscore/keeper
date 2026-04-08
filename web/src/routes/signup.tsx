@@ -80,7 +80,7 @@ function Signup() {
   return (
     <div className="fixed inset-0 font-body">
       <Navbar />
-      <div className="flex h-full">
+      <div className="flex h-[calc(100vh-4rem)]">
         {/* Left — image panel, starts from top and goes behind the navbar */}
         <div className="relative hidden lg:flex lg:w-[45%]">
           <img
@@ -110,7 +110,7 @@ function Signup() {
 
         {/* Right — form panel */}
         {/* Right — form panel, padded so content clears the navbar */}
-        <div className="flex w-full flex-col items-center justify-center bg-slate-100 px-8 pt-16 lg:w-[55%]">
+        <div className="flex w-full flex-col items-center justify-center bg-slate-100 px-8 lg:w-[55%]">
           <div className="w-full max-w-xs rounded-2xl border border-border bg-background p-8 shadow-sm">
             {/* Logo */}
             <Link to="/" className="mb-6 flex items-center gap-2.5">
@@ -152,7 +152,6 @@ function Signup() {
             ) : (
               <form className="space-y-4" onSubmit={handleSubmit}>
                 <div className="grid gap-2">
-                  <br />
                   <Label htmlFor="username" className="font-body">
                     Username
                   </Label>
