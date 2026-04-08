@@ -18,6 +18,7 @@ public class AuthController : ControllerBase
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly IAuthCodeSender _authCodeSender;
     private readonly PendingSignupChallengeStore _pendingSignupChallengeStore;
+    private readonly PendingLoginChallengeStore _pendingLoginChallengeStore;
     private readonly IWebHostEnvironment _environment;
 
     public AuthController(
@@ -25,12 +26,14 @@ public class AuthController : ControllerBase
         SignInManager<ApplicationUser> signInManager,
         IAuthCodeSender authCodeSender,
         PendingSignupChallengeStore pendingSignupChallengeStore,
+        PendingLoginChallengeStore pendingLoginChallengeStore,
         IWebHostEnvironment environment)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _authCodeSender = authCodeSender;
         _pendingSignupChallengeStore = pendingSignupChallengeStore;
+        _pendingLoginChallengeStore = pendingLoginChallengeStore;
         _environment = environment;
     }
 
@@ -40,13 +43,6 @@ public class AuthController : ControllerBase
     [HttpPost("register")]
     public async Task<ActionResult<AuthChallengeResponse>> Register([FromBody] RegisterRequest request, CancellationToken cancellationToken)
     {
-        var username = request.Username.Trim();
-        if (string.IsNullOrWhiteSpace(username))
-        {
-            ModelState.AddModelError(nameof(request.Username), "Username is required.");
-            return ValidationProblem(ModelState);
-        }
-
         var email = request.Email.Trim();
         if (string.IsNullOrWhiteSpace(email))
         {
@@ -56,7 +52,7 @@ public class AuthController : ControllerBase
 
         var user = new ApplicationUser
         {
-            UserName = username,
+            UserName = email,
             Email = email,
             TwoFactorEnabled = true,
         };
@@ -145,19 +141,17 @@ public class AuthController : ControllerBase
         // Must branch here before treating !Succeeded as wrong password.
         if (signInResult.RequiresTwoFactor)
         {
-            var twoFactorUser = await _signInManager.GetTwoFactorAuthenticationUserAsync();
-            if (twoFactorUser is null)
-            {
-                return Unauthorized(new { error = "Your login session expired. Please try again." });
-            }
-
-            await SendLoginCodeAsync(twoFactorUser, cancellationToken);
+            // Use the already-loaded user (same as Identity's 2FA user). Also persist a
+            // first-party cookie so resend/verify work when the SPA and API are on different
+            // origins and Identity's intermediate 2FA cookie is not stored by the browser.
+            await SendLoginCodeAsync(user, cancellationToken);
+            _pendingLoginChallengeStore.Write(Response, user.Id, user.Email ?? email, _environment.IsDevelopment());
 
             return Ok(new AuthChallengeResponse
             {
                 RequiresCode = true,
                 Flow = "login",
-                Email = twoFactorUser.Email ?? email
+                Email = user.Email ?? email
             });
         }
 
@@ -232,27 +226,30 @@ public class AuthController : ControllerBase
     [HttpPost("login/verify")]
     public async Task<ActionResult<AuthUserResponse>> VerifyLogin([FromBody] CodeVerificationRequest request)
     {
-        var result = await _signInManager.TwoFactorSignInAsync(TokenOptions.DefaultEmailProvider, request.Code.Trim(), false, false);
-        if (!result.Succeeded)
+        var user = await ResolvePendingLoginUserAsync(request.Email);
+        if (user is null)
+        {
+            return Unauthorized(new { error = "Your login session expired. Please try again." });
+        }
+
+        var isValid = await _userManager.VerifyTwoFactorTokenAsync(user, TokenOptions.DefaultEmailProvider, request.Code.Trim());
+        if (!isValid)
         {
             return Unauthorized(new { error = "Invalid or expired code." });
         }
 
-        var user = await _userManager.GetUserAsync(User);
-        if (user is null)
-        {
-            return Unauthorized(new { error = "Unable to finish login." });
-        }
-
+        await _signInManager.SignOutAsync();
+        await _signInManager.SignInAsync(user, isPersistent: false);
+        _pendingLoginChallengeStore.Clear(Response, _environment.IsDevelopment());
         return Ok(await BuildResponseAsync(user));
     }
 
     [AllowAnonymous]
     [EnableRateLimiting("auth")]
     [HttpPost("login/resend")]
-    public async Task<IActionResult> ResendLoginCode(CancellationToken cancellationToken)
+    public async Task<IActionResult> ResendLoginCode([FromBody] SignupChallengeRequest? request, CancellationToken cancellationToken)
     {
-        var user = await _signInManager.GetTwoFactorAuthenticationUserAsync();
+        var user = await ResolvePendingLoginUserAsync(request?.Email);
         if (user is null)
         {
             return Unauthorized(new { error = "Your login session expired. Please try again." });
@@ -296,7 +293,6 @@ public class AuthController : ControllerBase
         return new AuthUserResponse
         {
             Email = user.Email ?? string.Empty,
-            Username = user.UserName ?? string.Empty,
             Roles = roles.ToArray()
         };
     }
@@ -359,6 +355,49 @@ public class AuthController : ControllerBase
 
         var user = await _userManager.Users.SingleOrDefaultAsync(candidate => candidate.NormalizedEmail == normalizedEmail);
         if (user is null || user.EmailConfirmed)
+        {
+            return null;
+        }
+
+        return user;
+    }
+
+    /// <summary>
+    /// Resolves the user for email 2FA during login: Identity's 2FA cookie (same-site) or
+    /// <see cref="PendingLoginChallengeStore"/> (cross-origin SPA + API).
+    /// </summary>
+    private async Task<ApplicationUser?> ResolvePendingLoginUserAsync(string? requestedEmail)
+    {
+        var trimmedRequested = requestedEmail?.Trim();
+
+        var fromIdentity = await _signInManager.GetTwoFactorAuthenticationUserAsync();
+        if (fromIdentity is not null)
+        {
+            if (!string.IsNullOrWhiteSpace(trimmedRequested)
+                && !string.Equals(fromIdentity.Email, trimmedRequested, StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            return fromIdentity;
+        }
+
+        var challenge = _pendingLoginChallengeStore.Read(Request);
+        if (challenge is null)
+        {
+            return null;
+        }
+
+        var user = await _userManager.FindByIdAsync(challenge.UserId);
+        if (user is null
+            || !string.Equals(user.Email, challenge.Email, StringComparison.OrdinalIgnoreCase))
+        {
+            _pendingLoginChallengeStore.Clear(Response, _environment.IsDevelopment());
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(trimmedRequested)
+            && !string.Equals(user.Email, trimmedRequested, StringComparison.OrdinalIgnoreCase))
         {
             return null;
         }

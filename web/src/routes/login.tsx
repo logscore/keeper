@@ -17,7 +17,6 @@ type AuthChallengeResponse = {
 
 type AuthUserResponse = {
   email: string;
-  username: string;
   roles: string[];
 };
 
@@ -54,18 +53,18 @@ function Login() {
     },
   });
   const verifyMutation = useMutation({
-    mutationFn: (code: string) => verifyLoginCode(code),
+    mutationFn: (code: string) =>
+      verifyLoginCode(code, (challenge?.email ?? email).trim()),
     onSuccess: async (user) => {
       queryClient.setQueryData(["auth", "me"], {
         email: user.email,
-        username: user.username,
       });
       await queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
       await navigate({ to: "/donor" });
     },
   });
   const resendMutation = useMutation({
-    mutationFn: () => resendLoginCode(),
+    mutationFn: () => resendLoginCode((challenge?.email ?? email).trim()),
   });
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -250,14 +249,17 @@ async function submitLogin(input: {
   return response.json() as Promise<AuthChallengeResponse>;
 }
 
-async function verifyLoginCode(code: string): Promise<AuthUserResponse> {
+async function verifyLoginCode(
+  code: string,
+  emailForChallenge: string,
+): Promise<AuthUserResponse> {
   const response = await fetch(`${apiBaseUrl}/api/auth/login/verify`, {
     method: "POST",
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ code }),
+    body: JSON.stringify({ code, email: emailForChallenge }),
   });
 
   if (!response.ok) {
@@ -267,10 +269,14 @@ async function verifyLoginCode(code: string): Promise<AuthUserResponse> {
   return response.json() as Promise<AuthUserResponse>;
 }
 
-async function resendLoginCode(): Promise<void> {
+async function resendLoginCode(emailForChallenge: string): Promise<void> {
   const response = await fetch(`${apiBaseUrl}/api/auth/login/resend`, {
     method: "POST",
     credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email: emailForChallenge }),
   });
 
   if (!response.ok) {

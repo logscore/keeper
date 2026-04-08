@@ -33,25 +33,22 @@ export const Route = createFileRoute("/signup")({
 function Signup() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const navigate = useNavigate();
-  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const signupMutation = useMutation({
     mutationFn: ({
-      username,
       email,
       password,
     }: {
-      username: string;
       email: string;
       password: string;
-    }) => submitSignup({ username, email, password }),
+    }) => submitSignup({ email, password }),
     onSuccess: async (response) => {
       if (response.requiresCode) {
         await navigate({
           to: "/signup/verify",
           search: { email: response.email },
-        });
+        } as unknown as Parameters<ReturnType<typeof useNavigate>>[0]);
         return;
       }
 
@@ -61,7 +58,7 @@ function Signup() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    await signupMutation.mutateAsync({ username, email, password });
+    await signupMutation.mutateAsync({ email, password });
   }
 
   if (pathname !== "/signup") {
@@ -125,20 +122,6 @@ function Signup() {
 
             <form className="space-y-4" onSubmit={handleSubmit}>
               <div className="grid gap-2">
-                <Label htmlFor="username" className="font-body">
-                  Username
-                </Label>
-                <Input
-                  id="username"
-                  type="text"
-                  placeholder="janedoe"
-                  autoComplete="username"
-                  value={username}
-                  onChange={(event) => setUsername(event.target.value)}
-                  required
-                />
-              </div>
-              <div className="grid gap-2">
                 <Label htmlFor="email" className="font-body">
                   Email
                 </Label>
@@ -196,7 +179,6 @@ function Signup() {
 }
 
 async function submitSignup(input: {
-  username: string;
   email: string;
   password: string;
 }): Promise<AuthChallengeResponse> {

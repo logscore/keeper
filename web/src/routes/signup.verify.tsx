@@ -10,7 +10,6 @@ import { Label } from "@/components/ui/label";
 
 type AuthUserResponse = {
   email: string;
-  username: string;
   roles: string[];
 };
 
