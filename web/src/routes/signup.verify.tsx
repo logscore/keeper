@@ -41,7 +41,7 @@ function SignupVerify() {
         email: user.email,
       });
       await queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
-      await navigate({ to: "/donor" });
+      await navigate({ to: "/dashboard" });
     },
   });
 
