@@ -47,7 +47,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
 
             entity.HasKey(e => e.DonationId);
 
-            entity.Property(e => e.DonationId).HasColumnName("donation_id");
+            // Table key is not IDENTITY; ids are assigned in application code.
+            entity.Property(e => e.DonationId).HasColumnName("donation_id").ValueGeneratedNever();
             entity.Property(e => e.SupporterId).HasColumnName("supporter_id");
             entity.Property(e => e.DonationType).HasColumnName("donation_type").HasMaxLength(100);
             entity.Property(e => e.DonationDate).HasColumnName("donation_date");

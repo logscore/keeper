@@ -260,7 +260,7 @@ function ReportsPage() {
 						</select>
 						<button
 							type="button"
-							onClick={() => window.print()}
+							onClick={handleExportPDF}
 							className="inline-flex items-center gap-2 h-9 px-4 rounded-3xl border border-border bg-card text-sm font-body text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
 						>
 							{exporting ? (
