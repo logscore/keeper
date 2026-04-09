@@ -1,6 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
 	Activity,
 	Pencil,
@@ -11,8 +11,7 @@ import {
 	X,
 } from "lucide-react";
 import AdminSidebar from "@/components/admin/AdminSidebar";
-import { apiGetJson, type AuthMeResponse } from "@/lib/api";
-import { requireRole } from "@/lib/auth";
+import { apiDelete, apiGetJson, apiPostJson, apiPutJson, type AuthMeResponse } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -144,8 +143,6 @@ const REFERRAL_SOURCES = [
 	"Other",
 ];
 
-// Safehouses are loaded from the API via the residents data
-
 // ─── Badge color maps ─────────────────────────────────────────────────────────
 
 const STATUS_COLORS: Record<CaseStatus, string> = {
@@ -169,18 +166,37 @@ const RISK_COLORS: Record<RiskLevel, string> = {
 // ─── Mock data ────────────────────────────────────────────────────────────────
 
 type ResidentApi = {
-  id: string;
-  resident_code: string;
-  full_name?: string;
-  date_of_birth?: string;
-  sex?: string;
-  case_status?: string;
-  risk_level?: string;
-  case_category?: string;
-  safehouse_id?: string;
-  safehouse_name?: string;
-  assigned_social_worker?: string;
-  admission_date?: string;
+	id: string;
+	resident_code: string;
+	full_name?: string;
+	date_of_birth?: string;
+	sex?: string;
+	civil_status?: string;
+	nationality?: string;
+	case_status?: string;
+	case_category?: string;
+	case_subcategories?: string[];
+	risk_level?: string;
+	has_disability?: boolean;
+	disability_type?: string;
+	is_4ps_beneficiary?: boolean;
+	is_solo_parent?: boolean;
+	is_indigenous?: boolean;
+	is_informal_settler?: boolean;
+	admission_date?: string;
+	safehouse_id?: string;
+	safehouse_name?: string;
+	referred_by?: string;
+	referral_source?: string;
+	assigned_social_worker?: string;
+	reintegration_plan?: string;
+	reintegration_target_date?: string;
+	reintegration_status?: string;
+};
+
+type SafehouseApi = {
+	id: string;
+	name: string;
 };
 
 const EMPTY_FORM: ResidentProfile = {
@@ -256,13 +272,13 @@ function textareaClass() {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 function CaseloadPage() {
-  const [residents, setResidents] = useState<ResidentProfile[]>([]);
+  const queryClient = useQueryClient();
   const [filters, setFilters] = useState({
-    search: "",
-    status: "",
-    category: "",
-    safehouse: "",
-    riskLevel: "",
+	search: "",
+	status: "",
+	category: "",
+	safehouse: "",
+	riskLevel: "",
   });
 
   // Panel state
@@ -281,66 +297,101 @@ function CaseloadPage() {
     },
   });
 
-  const { data: residentsFromApi = [] } = useQuery<ResidentApi[]>({
-    queryKey: ["admin-data", "residents", "caseload"],
-    queryFn: () => apiGetJson<ResidentApi[]>("/api/admin-data/residents"),
+  const {
+	data: residentsFromApi = [],
+	isLoading: isResidentsLoading,
+	error: residentsError,
+  } = useQuery<ResidentApi[]>({
+	queryKey: ["admin", "caseload", "residents"],
+	queryFn: () => apiGetJson<ResidentApi[]>("/api/admin/caseload/residents"),
   });
 
-  const { data: lookupsData } = useQuery<{ safehouses: { id: string; name: string }[] }>({
-    queryKey: ["admin", "lookups", "donor-ui"],
-    queryFn: () => apiGetJson<{ safehouses: { id: string; name: string }[] }>("/api/admin/lookups/donor-ui"),
-    staleTime: 60_000,
+  const { data: safehouses = [] } = useQuery<SafehouseApi[]>({
+	queryKey: ["admin", "safehouses"],
+	queryFn: () => apiGetJson<SafehouseApi[]>("/api/admin/safehouses"),
   });
-  const SAFEHOUSES = lookupsData?.safehouses ?? [];
 
-  useEffect(() => {
-    const normalizeCaseStatus = (value?: string): CaseStatus => {
-      const v = (value ?? "").toLowerCase();
-      if (v === "intake") return "Intake";
-      if (v === "assessment") return "Assessment";
-      if (v === "reintegration") return "Reintegration";
-      if (v === "closed") return "Closed";
-      if (v === "graduated") return "Graduated";
-      return "Active Care";
-    };
-    const normalizeRisk = (value?: string): RiskLevel => {
-      const v = (value ?? "").toLowerCase();
-      if (v === "low") return "Low";
-      if (v === "high") return "High";
-      if (v === "critical") return "Critical";
-      return "Medium";
-    };
-    setResidents(
-      residentsFromApi.map((r) => ({
-        id: r.id,
-        resident_code: r.resident_code || `RES-${r.id}`,
-        full_name: r.full_name || `Resident ${r.id}`,
-        date_of_birth: r.date_of_birth || "",
-        sex: r.sex || "Female",
-        civil_status: "",
-        nationality: "Filipino",
-        case_status: normalizeCaseStatus(r.case_status),
-        case_category: r.case_category || "",
-        case_subcategories: [],
-        risk_level: normalizeRisk(r.risk_level),
-        has_disability: false,
-        disability_type: "",
-        is_4ps_beneficiary: false,
-        is_solo_parent: false,
-        is_indigenous: false,
-        is_informal_settler: false,
-        admission_date: r.admission_date || "",
-        safehouse_id: r.safehouse_id || "",
-        safehouse_name: r.safehouse_name || "",
-        referred_by: "",
-        referral_source: "",
-        assigned_social_worker: r.assigned_social_worker || "",
-        reintegration_plan: "",
-        reintegration_target_date: "",
-        reintegration_status: "",
-      }))
-    );
-  }, [residentsFromApi]);
+  const residents = useMemo<ResidentProfile[]>(
+	() =>
+		residentsFromApi.map((r) => ({
+			id: r.id,
+			resident_code: r.resident_code || `RES-${r.id}`,
+			full_name: r.full_name || `Resident ${r.id}`,
+			date_of_birth: r.date_of_birth || "",
+			sex: r.sex || "",
+			civil_status: r.civil_status || "",
+			nationality: r.nationality || "Filipino",
+			case_status: r.case_status || "Active Care",
+			case_category: r.case_category || "",
+			case_subcategories: r.case_subcategories ?? [],
+			risk_level: r.risk_level || "Medium",
+			has_disability: r.has_disability ?? false,
+			disability_type: r.disability_type || "",
+			is_4ps_beneficiary: r.is_4ps_beneficiary ?? false,
+			is_solo_parent: r.is_solo_parent ?? false,
+			is_indigenous: r.is_indigenous ?? false,
+			is_informal_settler: r.is_informal_settler ?? false,
+			admission_date: r.admission_date || "",
+			safehouse_id: r.safehouse_id || "",
+			safehouse_name: r.safehouse_name || "",
+			referred_by: r.referred_by || "",
+			referral_source: r.referral_source || "",
+			assigned_social_worker: r.assigned_social_worker || "",
+			reintegration_plan: r.reintegration_plan || "",
+			reintegration_target_date: r.reintegration_target_date || "",
+			reintegration_status: r.reintegration_status || "",
+		})),
+	[residentsFromApi]
+  );
+
+  const saveMutation = useMutation({
+	mutationFn: async (payload: { mode: "add" | "edit"; data: ResidentProfile }) => {
+		const body = {
+			full_name: payload.data.full_name,
+			resident_code: payload.data.resident_code,
+			date_of_birth: payload.data.date_of_birth,
+			sex: payload.data.sex,
+			civil_status: payload.data.civil_status,
+			case_status: payload.data.case_status,
+			case_category: payload.data.case_category,
+			case_subcategories: payload.data.case_subcategories,
+			risk_level: payload.data.risk_level,
+			has_disability: payload.data.has_disability,
+			disability_type: payload.data.disability_type,
+			is_4ps_beneficiary: payload.data.is_4ps_beneficiary,
+			is_solo_parent: payload.data.is_solo_parent,
+			is_indigenous: payload.data.is_indigenous,
+			is_informal_settler: payload.data.is_informal_settler,
+			admission_date: payload.data.admission_date,
+			safehouse_id: payload.data.safehouse_id,
+			referred_by: payload.data.referred_by,
+			referral_source: payload.data.referral_source,
+			assigned_social_worker: payload.data.assigned_social_worker,
+			reintegration_plan: payload.data.reintegration_plan,
+			reintegration_target_date: payload.data.reintegration_target_date,
+			reintegration_status: payload.data.reintegration_status,
+		};
+
+		if (payload.mode === "add") {
+			await apiPostJson("/api/admin/caseload/residents", body);
+			return;
+		}
+
+		await apiPutJson(`/api/admin/caseload/residents/${payload.data.id}`, body);
+	},
+	onSuccess: async () => {
+		await queryClient.invalidateQueries({ queryKey: ["admin", "caseload", "residents"] });
+	},
+  });
+
+  const deleteMutation = useMutation({
+	mutationFn: async (residentId: string) => {
+		await apiDelete(`/api/admin/caseload/residents/${residentId}`);
+	},
+	onSuccess: async () => {
+		await queryClient.invalidateQueries({ queryKey: ["admin", "caseload", "residents"] });
+	},
+  });
 
   // ── Filtering ──────────────────────────────────────────────────────────────
 
@@ -359,6 +410,13 @@ function CaseloadPage() {
 
   const anyFilterActive =
     filters.search || filters.status || filters.category || filters.safehouse || filters.riskLevel;
+
+  const mutationError =
+	saveMutation.error instanceof Error
+		? saveMutation.error.message
+		: deleteMutation.error instanceof Error
+			? deleteMutation.error.message
+			: "";
 
   // ── Metrics ────────────────────────────────────────────────────────────────
 
@@ -398,7 +456,7 @@ function CaseloadPage() {
       if (key === "case_category") next.case_subcategories = [];
       // Sync safehouse name when id changes
       if (key === "safehouse_id") {
-        const sh = SAFEHOUSES.find((s) => s.id === value);
+        const sh = safehouses.find((s) => s.id === value);
         next.safehouse_name = sh?.name ?? "";
       }
       return next;
@@ -414,24 +472,20 @@ function CaseloadPage() {
     }));
   }
 
-  function handleSave(e: React.FormEvent) {
-    e.preventDefault();
-    if (panelMode === "add") {
-      const newResident: ResidentProfile = {
-        ...formData,
-        id: `r-${Date.now()}`,
-        resident_code: formData.resident_code || `KPR-${new Date().getFullYear()}-${String(residents.length + 1).padStart(3, "0")}`,
-      };
-      // TODO: POST to your C# API endpoint
-      setResidents((prev) => [newResident, ...prev]);
-    } else if (panelMode === "edit") {
-      // TODO: PUT to your C# API endpoint
-      setResidents((prev) => prev.map((r) => (r.id === formData.id ? formData : r)));
-      setPanelResident(formData);
-      setPanelMode("view");
-      return;
-    }
-    closePanel();
+  async function handleSave(e: React.FormEvent) {
+	e.preventDefault();
+	if (panelMode !== "add" && panelMode !== "edit") return;
+
+	await saveMutation.mutateAsync({ mode: panelMode, data: formData });
+	closePanel();
+  }
+
+  async function handleDelete() {
+	if (!panelResident) return;
+	const ok = window.confirm(`Delete resident ${panelResident.full_name}? This cannot be undone.`);
+	if (!ok) return;
+	await deleteMutation.mutateAsync(panelResident.id);
+	closePanel();
   }
 
   // ── Panel: view content ────────────────────────────────────────────────────
@@ -684,7 +738,7 @@ function CaseloadPage() {
             <Label className="font-body text-xs font-semibold uppercase tracking-wide text-muted-foreground">Safehouse <span className="text-red-500">*</span></Label>
             <select required aria-label="Safehouse" value={formData.safehouse_id} onChange={(e) => handleField("safehouse_id", e.target.value)} className={selectClass()}>
               <option value="">Select safehouse…</option>
-              {SAFEHOUSES.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              {safehouses.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </div>
         </div>
@@ -816,7 +870,7 @@ function CaseloadPage() {
               className="h-9 rounded-3xl border border-transparent bg-input/50 px-3 text-sm font-body text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 min-w-[150px]"
             >
               <option value="">All Safehouses</option>
-              {SAFEHOUSES.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              {safehouses.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
             {anyFilterActive && (
               <button
@@ -844,7 +898,19 @@ function CaseloadPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.length === 0 ? (
+              {isResidentsLoading ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center py-16 text-muted-foreground font-body text-sm">
+                    Loading residents...
+                  </TableCell>
+                </TableRow>
+              ) : residentsError ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center py-16 text-destructive font-body text-sm">
+                    Failed to load residents. Please refresh.
+                  </TableCell>
+                </TableRow>
+              ) : filtered.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={9} className="text-center py-16 text-muted-foreground font-body text-sm">
                     No residents match the current filters.
@@ -952,8 +1018,19 @@ function CaseloadPage() {
 
             {/* Panel footer */}
             <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border flex-shrink-0 bg-background">
+              {mutationError && (
+                <p className="mr-auto font-body text-xs text-destructive">{mutationError}</p>
+              )}
               {panelMode === "view" ? (
                 <>
+                  <Button
+                    variant="outline"
+                    onClick={handleDelete}
+                    className="font-body px-5 h-9 rounded-xl text-destructive border-destructive/30 hover:bg-destructive/10"
+                    disabled={deleteMutation.isPending}
+                  >
+                    {deleteMutation.isPending ? "Deleting..." : "Delete"}
+                  </Button>
                   <Button variant="outline" onClick={closePanel} className="font-body px-5 h-9 rounded-xl">
                     Close
                   </Button>
@@ -984,8 +1061,13 @@ function CaseloadPage() {
                     type="submit"
                     form="resident-form"
                     className="font-body bg-primary hover:bg-primary/90 text-primary-foreground px-5 h-9 rounded-xl"
+                    disabled={saveMutation.isPending}
                   >
-                    {panelMode === "edit" ? "Save Changes" : "Add Resident"}
+                    {saveMutation.isPending
+                      ? "Saving..."
+                      : panelMode === "edit"
+                        ? "Save Changes"
+                        : "Add Resident"}
                   </Button>
                 </>
               )}

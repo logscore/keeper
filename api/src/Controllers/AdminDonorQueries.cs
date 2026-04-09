@@ -45,7 +45,12 @@ internal static class AdminDonorQueries
             return Array.Empty<AdminContributionListDto>();
         }
 
-        var supporterIds = donationRows.Select(d => d.SupporterId).Distinct().ToArray();
+        var supporterIds = donationRows
+            .Select(d => d.SupporterId)
+            .Where(id => id.HasValue)
+            .Select(id => id!.Value)
+            .Distinct()
+            .ToArray();
         var supporters = await db
             .Supporters.AsNoTracking()
             .Where(s => supporterIds.Contains(s.SupporterId))
@@ -67,15 +72,16 @@ internal static class AdminDonorQueries
 
         var firstAllocationByDonation = allocRows
             .GroupBy(x => x.DonationId)
-            .ToDictionary(
-                g => g.Key,
-                g => g.OrderBy(x => x.AllocationId).First()
-            );
+            .ToDictionary(g => g.Key, g => g.OrderBy(x => x.AllocationId).First());
 
         var list = new List<AdminContributionListDto>(donationRows.Count);
         foreach (var d in donationRows)
         {
-            supporters.TryGetValue(d.SupporterId, out var supporter);
+            var supporter =
+                d.SupporterId.HasValue
+                && supporters.TryGetValue(d.SupporterId.Value, out var matched)
+                    ? matched
+                    : null;
             firstAllocationByDonation.TryGetValue(d.DonationId, out var alloc);
 
             list.Add(MapContribution(d, supporter, alloc?.SafehouseName, alloc?.ProgramArea));
@@ -178,16 +184,14 @@ internal static class AdminDonorQueries
     {
         if (s.CreatedAt.HasValue)
         {
-            return DateOnly.FromDateTime(s.CreatedAt.Value.Date)
+            return DateOnly
+                .FromDateTime(s.CreatedAt.Value.Date)
                 .ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         }
 
         if (s.FirstDonationDate.HasValue)
         {
-            return s.FirstDonationDate.Value.ToString(
-                "yyyy-MM-dd",
-                CultureInfo.InvariantCulture
-            );
+            return s.FirstDonationDate.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         }
 
         return string.Empty;
@@ -220,7 +224,8 @@ internal static class AdminDonorQueries
             return "Monetary Donor";
         }
 
-        return char.ToUpperInvariant(s[0]) + (s.Length > 1 ? s.Substring(1).ToLowerInvariant() : "");
+        return char.ToUpperInvariant(s[0])
+            + (s.Length > 1 ? s.Substring(1).ToLowerInvariant() : "");
     }
 
     private static string MapSupporterStatusToUi(string? status)
@@ -256,9 +261,10 @@ internal static class AdminDonorQueries
         string? allocationProgramArea
     )
     {
-        var supporterName = supporter is not null
-            ? FormatSupporterDisplayName(supporter)
-            : $"Supporter {d.SupporterId}";
+        var supporterName =
+            supporter is not null ? FormatSupporterDisplayName(supporter)
+            : d.SupporterId.HasValue ? $"Supporter {d.SupporterId.Value}"
+            : "Guest donor";
 
         var uiType = MapDonationTypeToContributionUi(d.DonationType);
         var est = d.EstimatedValue ?? 0m;
@@ -268,7 +274,7 @@ internal static class AdminDonorQueries
         var dto = new AdminContributionListDto
         {
             Id = d.DonationId.ToString(CultureInfo.InvariantCulture),
-            SupporterId = d.SupporterId.ToString(CultureInfo.InvariantCulture),
+            SupporterId = d.SupporterId?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
             SupporterName = supporterName,
             ContributionType = uiType,
             Date = d.DonationDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
