@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import { apiGetJson, type AuthMeResponse } from "@/lib/api";
 import {
@@ -23,12 +23,10 @@ import {
 	FileText,
 	Heart,
 	Home,
-	Loader2,
 	TrendingUp,
 	Users,
 } from "lucide-react";
 import type { PieLabelRenderProps } from "recharts";
-import { useAuth } from "@/hooks/use-auth";
 import { requireRole } from "@/lib/auth";
 
 export const Route = createFileRoute("/reports")({

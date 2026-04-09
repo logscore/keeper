@@ -55,7 +55,7 @@ function AdminDashboard() {
     queryFn: () => apiGetJson<Activity[]>("/api/admin-data/activities"),
   });
 
-	const loading = residentsLoading || donationsLoading || safehousesLoading;
+	const loading = residentsLoading || donationsLoading || safehousesLoading || activitiesLoading;
 
 	if (loading) {
 		return (

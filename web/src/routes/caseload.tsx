@@ -1,6 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import {
+	Activity,
+	Pencil,
+	Plus,
+	RefreshCw,
+	ShieldAlert,
+	Users,
+	X,
+} from "lucide-react";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import { apiGetJson, type AuthMeResponse } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -14,7 +23,6 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { useAuth } from "@/hooks/use-auth";
 import { requireRole } from "@/lib/auth";
 
 export const Route = createFileRoute("/caseload")({
@@ -134,6 +142,12 @@ const REFERRAL_SOURCES = [
 	"Self-Referral",
 	"Family or Friend",
 	"Other",
+];
+
+const SAFEHOUSES = [
+	{ id: "SH-001", name: "Tahanan ng Pag-asa" },
+	{ id: "SH-002", name: "Bagong Simula Center" },
+	{ id: "SH-003", name: "Kalayaan Shelter" },
 ];
 
 // ─── Badge color maps ─────────────────────────────────────────────────────────
@@ -443,7 +457,7 @@ function CaseloadPage() {
           <ViewField
             label="Case Status"
             value={
-              <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-body font-medium border ${STATUS_COLORS[r.case_status]}`}>
+              <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-body font-medium border ${STATUS_COLORS[r.case_status as CaseStatus] ?? STATUS_COLORS.Intake}`}>
                 {r.case_status}
               </span>
             }
@@ -451,7 +465,7 @@ function CaseloadPage() {
           <ViewField
             label="Risk Level"
             value={
-              <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-body font-medium border ${RISK_COLORS[r.risk_level]}`}>
+              <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-body font-medium border ${RISK_COLORS[r.risk_level as RiskLevel] ?? RISK_COLORS.Medium}`}>
                 {r.risk_level}
               </span>
             }
@@ -848,12 +862,12 @@ function CaseloadPage() {
                       {r.case_category}
                     </TableCell>
                     <TableCell>
-                      <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-body font-medium border ${STATUS_COLORS[r.case_status]}`}>
+                      <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-body font-medium border ${STATUS_COLORS[r.case_status as CaseStatus] ?? STATUS_COLORS.Intake}`}>
                         {r.case_status}
                       </span>
                     </TableCell>
                     <TableCell>
-                      <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-body font-medium border ${RISK_COLORS[r.risk_level]}`}>
+                      <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-body font-medium border ${RISK_COLORS[r.risk_level as RiskLevel] ?? RISK_COLORS.Medium}`}>
                         {r.risk_level}
                       </span>
                     </TableCell>
