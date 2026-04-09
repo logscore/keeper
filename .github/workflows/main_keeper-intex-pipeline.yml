@@ -8,6 +8,7 @@ on:
       - "ml-pipelines/app/**"
       - "ml-pipelines/pipelines/**"
       - "ml-pipelines/scripts/**"
+      - "ml-pipelines/Dataset/**"
       - "ml-pipelines/requirements.txt"
       - ".github/workflows/main_keeper-intex-pipeline.yml"
   workflow_dispatch:
@@ -39,6 +40,7 @@ jobs:
           cp -r ml-pipelines/app deploy/
           cp -r ml-pipelines/pipelines deploy/
           cp -r ml-pipelines/scripts deploy/
+          cp -r ml-pipelines/Dataset deploy/
           cp ml-pipelines/requirements.txt deploy/
 
       - name: Upload artifact for deployment jobs
