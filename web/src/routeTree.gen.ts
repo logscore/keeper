@@ -17,7 +17,8 @@ import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HomeVisitationsRouteImport } from './routes/home-visitations'
 import { Route as DonorsContributionsRouteImport } from './routes/donors-contributions'
-import { Route as DonorRouteImport } from './routes/donor'
+import { Route as DonateThankYouRouteImport } from './routes/donate-thank-you'
+import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as CaseloadRouteImport } from './routes/caseload'
 import { Route as AdminRouteImport } from './routes/admin'
@@ -65,9 +66,14 @@ const DonorsContributionsRoute = DonorsContributionsRouteImport.update({
   path: '/donors-contributions',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DonorRoute = DonorRouteImport.update({
-  id: '/donor',
-  path: '/donor',
+const DonateThankYouRoute = DonateThankYouRouteImport.update({
+  id: '/donate-thank-you',
+  path: '/donate-thank-you',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContactRoute = ContactRouteImport.update({
@@ -107,7 +113,8 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/caseload': typeof CaseloadRoute
   '/contact': typeof ContactRoute
-  '/donor': typeof DonorRoute
+  '/dashboard': typeof DashboardRoute
+  '/donate-thank-you': typeof DonateThankYouRoute
   '/donors-contributions': typeof DonorsContributionsRoute
   '/home-visitations': typeof HomeVisitationsRoute
   '/login': typeof LoginRoute
@@ -124,7 +131,8 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/caseload': typeof CaseloadRoute
   '/contact': typeof ContactRoute
-  '/donor': typeof DonorRoute
+  '/dashboard': typeof DashboardRoute
+  '/donate-thank-you': typeof DonateThankYouRoute
   '/donors-contributions': typeof DonorsContributionsRoute
   '/home-visitations': typeof HomeVisitationsRoute
   '/login': typeof LoginRoute
@@ -142,7 +150,8 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/caseload': typeof CaseloadRoute
   '/contact': typeof ContactRoute
-  '/donor': typeof DonorRoute
+  '/dashboard': typeof DashboardRoute
+  '/donate-thank-you': typeof DonateThankYouRoute
   '/donors-contributions': typeof DonorsContributionsRoute
   '/home-visitations': typeof HomeVisitationsRoute
   '/login': typeof LoginRoute
@@ -161,7 +170,8 @@ export interface FileRouteTypes {
     | '/admin'
     | '/caseload'
     | '/contact'
-    | '/donor'
+    | '/dashboard'
+    | '/donate-thank-you'
     | '/donors-contributions'
     | '/home-visitations'
     | '/login'
@@ -178,7 +188,8 @@ export interface FileRouteTypes {
     | '/admin'
     | '/caseload'
     | '/contact'
-    | '/donor'
+    | '/dashboard'
+    | '/donate-thank-you'
     | '/donors-contributions'
     | '/home-visitations'
     | '/login'
@@ -195,7 +206,8 @@ export interface FileRouteTypes {
     | '/admin'
     | '/caseload'
     | '/contact'
-    | '/donor'
+    | '/dashboard'
+    | '/donate-thank-you'
     | '/donors-contributions'
     | '/home-visitations'
     | '/login'
@@ -213,7 +225,8 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   CaseloadRoute: typeof CaseloadRoute
   ContactRoute: typeof ContactRoute
-  DonorRoute: typeof DonorRoute
+  DashboardRoute: typeof DashboardRoute
+  DonateThankYouRoute: typeof DonateThankYouRoute
   DonorsContributionsRoute: typeof DonorsContributionsRoute
   HomeVisitationsRoute: typeof HomeVisitationsRoute
   LoginRoute: typeof LoginRoute
@@ -282,11 +295,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DonorsContributionsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/donor': {
-      id: '/donor'
-      path: '/donor'
-      fullPath: '/donor'
-      preLoaderRoute: typeof DonorRouteImport
+    '/donate-thank-you': {
+      id: '/donate-thank-you'
+      path: '/donate-thank-you'
+      fullPath: '/donate-thank-you'
+      preLoaderRoute: typeof DonateThankYouRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contact': {
@@ -351,7 +371,8 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   CaseloadRoute: CaseloadRoute,
   ContactRoute: ContactRoute,
-  DonorRoute: DonorRoute,
+  DashboardRoute: DashboardRoute,
+  DonateThankYouRoute: DonateThankYouRoute,
   DonorsContributionsRoute: DonorsContributionsRoute,
   HomeVisitationsRoute: HomeVisitationsRoute,
   LoginRoute: LoginRoute,

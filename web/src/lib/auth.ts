@@ -4,8 +4,8 @@ import { apiGetJson } from "./api";
 
 export type AuthUser = {
 	email: string;
-	username: string;
 	roles: string[];
+	supporterId?: number | null;
 };
 
 export const meQueryOptions = {
@@ -32,7 +32,7 @@ export async function requireRole(
 		const to =
 			user.roles.includes("Admin") || user.roles.includes("Staff")
 				? "/admin"
-				: "/donor";
+				: "/dashboard";
 		throw redirect({ to });
 	}
 	return user;

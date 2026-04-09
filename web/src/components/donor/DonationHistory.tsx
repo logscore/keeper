@@ -26,7 +26,7 @@ export default function DonationHistory({
 	donations: Donation[];
 }) {
 	return (
-		<div className="bg-card rounded-2xl border border-border overflow-hidden">
+		<div className="overflow-hidden rounded-2xl border border-border bg-card">
 			<div className="p-6 pb-4">
 				<h3 className="font-heading text-lg font-semibold text-foreground">
 					Donation History
@@ -56,14 +56,14 @@ export default function DonationHistory({
 					<TableBody>
 						{donations.length === 0 && (
 							<TableRow>
-								<TableCell colSpan={5} className="text-center py-16">
+								<TableCell colSpan={5} className="py-16 text-center">
 									<div className="flex flex-col items-center justify-center space-y-4">
-										<p className="font-body text-base text-muted-foreground font-medium">
+										<p className="font-body text-base font-medium text-muted-foreground">
 											Your donation history will appear here once you
 											contribute.
 										</p>
 										<Link to="/" hash="donate">
-											<Button className="font-body gap-2 bg-yellow-500 hover:bg-yellow-600 text-black px-6 h-10 rounded-lg shadow-sm">
+											<Button className="h-10 gap-2 rounded-lg bg-yellow-500 px-6 font-body text-black shadow-sm hover:bg-yellow-600">
 												<Heart className="h-4 w-4" />
 												Donate Now
 											</Button>
@@ -75,19 +75,19 @@ export default function DonationHistory({
 						{donations.map((d) => (
 							<TableRow
 								key={d.id}
-								className="hover:bg-muted/30 even:bg-muted/20 transition-colors"
+								className="transition-colors even:bg-muted/20 hover:bg-muted/30"
 							>
 								<TableCell className="font-body text-sm text-foreground">
 									{format(new Date(d.created_date), "MMM d, yyyy")}
 								</TableCell>
 								<TableCell>
 									<span
-										className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-body font-medium border ${
+										className={`inline-flex rounded-full border px-2.5 py-0.5 font-body text-xs font-medium ${
 											typeColors[d.type ?? ""] ||
-											"bg-muted text-muted-foreground border-border"
+											"border-border bg-muted text-muted-foreground"
 										}`}
 									>
-										{d.type}
+										{d.type ?? "—"}
 									</span>
 								</TableCell>
 								<TableCell className="font-body text-sm text-foreground">

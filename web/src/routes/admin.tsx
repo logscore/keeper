@@ -97,7 +97,8 @@ function AdminDashboard() {
 						Dashboard
 					</h1>
 					<p className="font-body text-base text-muted-foreground mt-1">
-						Welcome back, {user?.username || "Admin"}. Here&apos;s today&apos;s
+						Welcome back,{" "}
+						{user?.email?.split("@")[0] || "Admin"}. Here&apos;s today&apos;s
 						overview.
 					</p>
 				</div>

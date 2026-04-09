@@ -54,6 +54,7 @@ builder.Services.Configure<ResendClientOptions>(options =>
 builder.Services.AddTransient<IResend, ResendClient>();
 builder.Services.AddDataProtection();
 builder.Services.AddScoped<PendingSignupChallengeStore>();
+builder.Services.AddScoped<PendingLoginChallengeStore>();
 
 if (builder.Environment.IsDevelopment())
 {
@@ -100,6 +101,12 @@ builder.Services.AddRateLimiter(options =>
             limiterOptions.QueueLimit = 0;
         }
     );
+    options.AddFixedWindowLimiter("public-donations", limiterOptions =>
+    {
+        limiterOptions.PermitLimit = 30;
+        limiterOptions.Window = TimeSpan.FromMinutes(1);
+        limiterOptions.QueueLimit = 0;
+    });
 });
 
 builder.Services.AddControllers();

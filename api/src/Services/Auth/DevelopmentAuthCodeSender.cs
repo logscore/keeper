@@ -13,7 +13,11 @@ public class DevelopmentAuthCodeSender(ILogger<DevelopmentAuthCodeSender> logger
         CancellationToken cancellationToken = default
     )
     {
-        _logger.LogInformation("Auth code for {Email} ({Flow}): {Code}", email, flow, code);
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("Auth code for {Email} ({Flow}): {Code}", email, flow, code);
+        }
+
         return Task.CompletedTask;
     }
 }

@@ -3,26 +3,16 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { Heart } from "lucide-react";
 import logoImg from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
-import { getApiBaseUrl } from "../../lib/api";
+import { getApiBaseUrl, type AuthMeResponse, logout } from "../../lib/api";
 
-async function fetchCurrentUser() {
+async function fetchCurrentUser(): Promise<AuthMeResponse | null> {
 	const apiBaseUrl = getApiBaseUrl();
 	if (!apiBaseUrl) return null;
 	const res = await fetch(`${apiBaseUrl}/api/auth/me`, {
 		credentials: "include",
 	});
 	if (!res.ok) return null;
-	return res.json() as Promise<{ email: string; username: string }>;
-}
-
-async function logout() {
-	const apiBaseUrl = getApiBaseUrl();
-	if (!apiBaseUrl) return;
-	const res = await fetch(`${apiBaseUrl}/api/auth/logout`, {
-		method: "POST",
-		credentials: "include",
-	});
-	if (!res.ok) throw new Error("Logout failed");
+	return res.json() as Promise<AuthMeResponse>;
 }
 
 export default function Navbar() {
@@ -46,44 +36,50 @@ export default function Navbar() {
 	});
 
 	return (
-		<header className="sticky top-0 left-0 right-0 z-50 flex flex-col w-full shadow-sm">
-			<nav className="bg-white/95 backdrop-blur-md border-b border-border w-full">
-				<div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+		<header className="sticky top-0 left-0 right-0 z-50 flex w-full flex-col shadow-sm">
+			<nav className="w-full border-b border-border bg-white/95 backdrop-blur-md">
+				<div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
 					<Link to="/" className="flex items-center gap-3">
 						<img
 							src={logoImg}
 							alt="Keeper Logo"
 							className="h-9 w-9 rounded-lg object-cover"
 						/>
-						<span className="font-heading text-xl font-semibold text-foreground tracking-tight">
+						<span className="font-heading text-xl font-semibold tracking-tight text-foreground">
 							Keeper
 						</span>
 					</Link>
 
-					<div className="hidden md:flex items-center gap-8">
+					<div className="hidden items-center gap-8 md:flex">
 						<Link
 							to="/"
-							className="text-sm font-body font-medium text-muted-foreground hover:text-yellow-600 transition-colors [&.active]:text-yellow-600 [&.active]:font-semibold"
+							className="font-body text-sm font-medium text-muted-foreground transition-colors hover:text-yellow-600 [&.active]:font-semibold [&.active]:text-yellow-600"
 						>
 							Home
 						</Link>
 						<Link
 							to="/work"
-							className="text-sm font-body font-medium text-muted-foreground hover:text-yellow-600 transition-colors [&.active]:text-yellow-600 [&.active]:font-semibold"
+							className="font-body text-sm font-medium text-muted-foreground transition-colors hover:text-yellow-600 [&.active]:font-semibold [&.active]:text-yellow-600"
 						>
 							Our Work
 						</Link>
 						<Link
 							to="/about"
-							className="text-sm font-body font-medium text-muted-foreground hover:text-yellow-600 transition-colors [&.active]:text-yellow-600 [&.active]:font-semibold"
+							className="font-body text-sm font-medium text-muted-foreground transition-colors hover:text-yellow-600 [&.active]:font-semibold [&.active]:text-yellow-600"
 						>
 							About
 						</Link>
 						<Link
 							to="/contact"
-							className="text-sm font-body font-medium text-muted-foreground hover:text-yellow-600 transition-colors [&.active]:text-yellow-600 [&.active]:font-semibold"
+							className="font-body text-sm font-medium text-muted-foreground transition-colors hover:text-yellow-600 [&.active]:font-semibold [&.active]:text-yellow-600"
 						>
 							Contact
+						</Link>
+						<Link
+							to={user ? "/dashboard" : "/login"}
+							className="font-body text-sm font-medium text-muted-foreground transition-colors hover:text-yellow-600 [&.active]:font-semibold [&.active]:text-yellow-600"
+						>
+							Dashboard
 						</Link>
 					</div>
 
@@ -107,7 +103,7 @@ export default function Navbar() {
 						<Link to="/" hash="donate">
 							<Button
 								size="sm"
-								className="font-body text-sm gap-2 bg-yellow-500 hover:bg-yellow-600 text-black"
+								className="gap-2 bg-yellow-500 font-body text-sm text-black hover:bg-yellow-600"
 							>
 								<Heart className="h-4 w-4" />
 								Donate

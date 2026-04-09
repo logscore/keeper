@@ -21,30 +21,30 @@ export default function MoneyFlow() {
 	const administrationLabel = `${moneyFlow.administrationPct}% Administration`;
 
 	return (
-		<section className="py-24 bg-white">
-			<div className="max-w-3xl mx-auto px-6 text-center">
+		<section className="bg-white py-24">
+			<div className="mx-auto max-w-3xl px-6 text-center">
 				<motion.div
 					initial={{ opacity: 0, y: 20 }}
 					whileInView={{ opacity: 1, y: 0 }}
 					viewport={{ once: true }}
 					transition={{ duration: 0.6 }}
 				>
-					<h2 className="font-heading text-2xl md:text-3xl font-bold text-foreground mb-8">
+					<h2 className="font-heading mb-8 text-2xl font-bold text-foreground md:text-3xl">
 						Where Your Money Goes
 					</h2>
 					{moneyFlowMetric.isLoading ? (
-						<p className="mb-4 font-body text-sm text-muted-foreground">
+						<p className="font-body mb-4 text-sm text-muted-foreground">
 							Loading latest allocation mix...
 						</p>
 					) : null}
 					{moneyFlowMetric.isError ? (
-						<p className="mb-4 font-body text-sm text-muted-foreground">
+						<p className="font-body mb-4 text-sm text-muted-foreground">
 							Showing fallback allocation while live data is unavailable.
 						</p>
 					) : null}
 
 					{/* Horizontal Stacked Bar */}
-					<div className="h-4 md:h-6 w-full rounded-full overflow-hidden flex mb-6 shadow-inner">
+					<div className="mb-6 flex h-4 w-full overflow-hidden rounded-full shadow-inner md:h-6">
 						<motion.div
 							initial={{ width: 0 }}
 							whileInView={{ width: `${moneyFlow.programsPct}%` }}
@@ -56,7 +56,7 @@ export default function MoneyFlow() {
 							initial={{ width: 0 }}
 							whileInView={{ width: `${moneyFlow.operationsPct}%` }}
 							transition={{ duration: 1, delay: 0.4, ease: "easeOut" }}
-							className="h-full bg-accent"
+							className="h-full bg-yellow-500"
 							title={operationsLabel}
 						/>
 						<motion.div
@@ -68,21 +68,21 @@ export default function MoneyFlow() {
 						/>
 					</div>
 
-					<div className="flex flex-wrap justify-center gap-6 mb-10">
+					<div className="mb-10 flex flex-wrap justify-center gap-6">
 						<div className="flex items-center gap-2">
-							<div className="w-3 h-3 rounded-full bg-primary" />
+							<div className="h-3 w-3 rounded-full bg-primary" />
 							<span className="font-body text-sm font-medium text-foreground">
 								{programsLabel}
 							</span>
 						</div>
 						<div className="flex items-center gap-2">
-							<div className="w-3 h-3 rounded-full bg-accent" />
+							<div className="h-3 w-3 rounded-full bg-yellow-500" />
 							<span className="font-body text-sm font-medium text-foreground">
 								{operationsLabel}
 							</span>
 						</div>
 						<div className="flex items-center gap-2">
-							<div className="w-3 h-3 rounded-full bg-muted-foreground/30" />
+							<div className="h-3 w-3 rounded-full bg-muted-foreground/30" />
 							<span className="font-body text-sm font-medium text-foreground">
 								{administrationLabel}
 							</span>

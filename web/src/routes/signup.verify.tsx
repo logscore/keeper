@@ -1,4 +1,4 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
 	createFileRoute,
 	Link,
@@ -16,8 +16,8 @@ import { meQueryOptions } from "@/lib/auth";
 
 type AuthUserResponse = {
 	email: string;
-	username: string;
 	roles: string[];
+	supporterId: number | null;
 };
 
 const apiBaseUrl = (() => {
@@ -36,7 +36,7 @@ export const Route = createFileRoute("/signup/verify")({
 				to:
 					user.roles.includes("Admin") || user.roles.includes("Staff")
 						? "/admin"
-						: "/donor",
+						: "/dashboard",
 			});
 		}
 	},
@@ -48,6 +48,7 @@ export const Route = createFileRoute("/signup/verify")({
 
 function SignupVerify() {
 	const navigate = useNavigate();
+	const queryClient = useQueryClient();
 	const { email: emailFromSearch } = Route.useSearch();
 	const [email, setEmail] = useState(emailFromSearch);
 	const [localError, setLocalError] = useState<string | null>(null);
@@ -55,8 +56,10 @@ function SignupVerify() {
 	const verifyMutation = useMutation({
 		mutationFn: ({ code, email }: { code: string; email: string }) =>
 			verifySignupCode(code, email),
-		onSuccess: async () => {
-			await navigate({ to: "/" });
+		onSuccess: async (user) => {
+			queryClient.setQueryData(["auth", "me"], user);
+			await queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
+			await navigate({ to: "/dashboard" });
 		},
 	});
 

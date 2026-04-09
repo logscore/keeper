@@ -38,7 +38,7 @@ export const Route = createFileRoute("/signup")({
 				to:
 					user.roles.includes("Admin") || user.roles.includes("Staff")
 						? "/admin"
-						: "/donor",
+						: "/dashboard",
 			});
 		}
 	},
@@ -50,19 +50,16 @@ function Signup() {
 		select: (state) => state.location.pathname,
 	});
 	const navigate = useNavigate();
-	const [username, setUsername] = useState("");
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const signupMutation = useMutation({
 		mutationFn: ({
-			username,
 			email,
 			password,
 		}: {
-			username: string;
 			email: string;
 			password: string;
-		}) => submitSignup({ username, email, password }),
+		}) => submitSignup({ email, password }),
 		onSuccess: async (response) => {
 			if (response.requiresCode) {
 				await navigate({
@@ -72,13 +69,13 @@ function Signup() {
 				return;
 			}
 
-			await navigate({ to: "/donor" });
+			await navigate({ to: "/dashboard" });
 		},
 	});
 
 	async function handleSubmit(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault();
-		await signupMutation.mutateAsync({ username, email, password });
+		await signupMutation.mutateAsync({ email, password });
 	}
 
 	if (pathname !== "/signup") {
@@ -103,24 +100,22 @@ function Signup() {
 							<br />
 							transforms lives.
 						</p>
-						<p className="font-body mt-2.5 text-sm text-white/75 leading-relaxed">
+						<p className="font-body mt-2.5 text-sm leading-relaxed text-white/75">
 							Every donation provides safety, healing, and hope for girls who
 							are survivors of abuse and trafficking in the Philippines.
 						</p>
 						<Link
 							to="/about"
-							className="mt-4 inline-block rounded-lg bg-white/15 backdrop-blur-sm border border-white/30 px-4 py-2 font-body text-sm font-medium text-white hover:bg-white/25 transition-colors"
+							className="mt-4 inline-block rounded-lg border border-white/30 bg-white/15 px-4 py-2 font-body text-sm font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/25"
 						>
 							Learn more about us →
 						</Link>
 					</div>
 				</div>
 
-				{/* Right — form panel */}
 				{/* Right — form panel, padded so content clears the navbar */}
 				<div className="flex w-full flex-col items-center justify-center bg-slate-100 px-8 lg:w-[55%]">
 					<div className="w-full max-w-sm rounded-2xl border border-border bg-background p-8 shadow-sm">
-						{/* Logo */}
 						<Link to="/" className="mb-6 flex items-center gap-2.5">
 							<img
 								src={logoImg}
@@ -141,20 +136,6 @@ function Signup() {
 						<br />
 
 						<form className="space-y-4" onSubmit={handleSubmit}>
-							<div className="grid gap-2">
-								<Label htmlFor="username" className="font-body">
-									Username
-								</Label>
-								<Input
-									id="username"
-									type="text"
-									placeholder="janedoe"
-									autoComplete="username"
-									value={username}
-									onChange={(event) => setUsername(event.target.value)}
-									required
-								/>
-							</div>
 							<div className="grid gap-2">
 								<Label htmlFor="email" className="font-body">
 									Email
@@ -189,7 +170,7 @@ function Signup() {
 							) : null}
 							<Button
 								type="submit"
-								className="w-full font-body bg-primary hover:bg-primary/90"
+								className="w-full bg-primary font-body hover:bg-primary/90"
 								disabled={signupMutation.isPending}
 							>
 								{signupMutation.isPending ? "Creating account..." : "Continue"}
@@ -213,7 +194,6 @@ function Signup() {
 }
 
 async function submitSignup(input: {
-	username: string;
 	email: string;
 	password: string;
 }): Promise<AuthChallengeResponse> {

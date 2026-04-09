@@ -5,11 +5,6 @@ namespace api.DTOs;
 public class RegisterRequest
 {
     [Required]
-    [MinLength(3)]
-    [MaxLength(50)]
-    public string Username { get; set; } = string.Empty;
-
-    [Required]
     [EmailAddress]
     [MaxLength(254)]
     public string Email { get; set; } = string.Empty;
@@ -40,9 +35,9 @@ public class SignupChallengeRequest
 
 public class LoginRequest
 {
+    /// <summary>Email address or Identity user name (e.g. seeded admin username).</summary>
     [Required]
-    [EmailAddress]
-    [MaxLength(254)]
+    [MaxLength(256)]
     public string Email { get; set; } = string.Empty;
 
     [Required]
@@ -61,8 +56,10 @@ public class AuthChallengeResponse
 public class AuthUserResponse
 {
     public string Email { get; set; } = string.Empty;
-    public string Username { get; set; } = string.Empty;
     public string[] Roles { get; set; } = [];
+
+    /// <summary>Primary key in <c>supporters</c> when this account is linked to a donor row (matched by email).</summary>
+    public int? SupporterId { get; set; }
 }
 
 public class UserListItemResponse

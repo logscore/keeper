@@ -23,8 +23,8 @@ type AuthChallengeResponse = {
 
 type AuthUserResponse = {
 	email: string;
-	username: string;
 	roles: string[];
+	supporterId: number | null;
 };
 
 const apiBaseUrl = (() => {
@@ -34,6 +34,23 @@ const apiBaseUrl = (() => {
 })();
 
 const unverifiedAccountError = "Please verify your email before signing in.";
+
+/** Surfaces clearer text when the browser raises TypeError: Failed to fetch (CORS, wrong URL, API down). */
+async function authFetch(
+	input: RequestInfo | URL,
+	init?: RequestInit,
+): Promise<Response> {
+	try {
+		return await fetch(input, init);
+	} catch (e) {
+		if (e instanceof TypeError) {
+			throw new Error(
+				"Cannot reach the API. Check VITE_API_BASE_URL, add this site to Cors:AllowedOrigins on the server, and that the API is running.",
+			);
+		}
+		throw e;
+	}
+}
 
 export const Route = createFileRoute("/login")({
 	beforeLoad: async ({ context }) => {
@@ -45,7 +62,7 @@ export const Route = createFileRoute("/login")({
 				to:
 					user.roles.includes("Admin") || user.roles.includes("Staff")
 						? "/admin"
-						: "/donor",
+						: "/dashboard",
 			});
 		}
 	},
@@ -69,22 +86,21 @@ function Login() {
 				return;
 			}
 
-			await navigate({ to: "/donor" });
+			const user = await fetchMe();
+			await navigate({ to: roleBasedRedirect(user.roles) });
 		},
 	});
 	const verifyMutation = useMutation({
-		mutationFn: (code: string) => verifyLoginCode(code),
+		mutationFn: (code: string) =>
+			verifyLoginCode(code, (challenge?.email ?? email).trim()),
 		onSuccess: async (user) => {
 			queryClient.setQueryData(["auth", "me"], user);
-			const to =
-				user.roles.includes("Admin") || user.roles.includes("Staff")
-					? "/admin"
-					: "/donor";
-			await navigate({ to });
+			await queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
+			await navigate({ to: roleBasedRedirect(user.roles) });
 		},
 	});
 	const resendMutation = useMutation({
-		mutationFn: () => resendLoginCode(),
+		mutationFn: () => resendLoginCode((challenge?.email ?? email).trim()),
 	});
 
 	async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -119,13 +135,13 @@ function Login() {
 							<br />
 							transforms lives.
 						</p>
-						<p className="font-body mt-2.5 text-sm text-white/75 leading-relaxed">
+						<p className="font-body mt-2.5 text-sm leading-relaxed text-white/75">
 							Every donation provides safety, healing, and hope for girls who
 							are survivors of abuse and trafficking in the Philippines.
 						</p>
 						<Link
 							to="/work"
-							className="mt-4 inline-block rounded-lg bg-white/15 backdrop-blur-sm border border-white/30 px-4 py-2 font-body text-sm font-medium text-white hover:bg-white/25 transition-colors"
+							className="mt-4 inline-block rounded-lg border border-white/30 bg-white/15 px-4 py-2 font-body text-sm font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/25"
 						>
 							See how we help people →
 						</Link>
@@ -135,7 +151,6 @@ function Login() {
 				{/* Right — form panel */}
 				<div className="flex w-full flex-col items-center justify-center bg-slate-100 px-8 lg:w-[55%]">
 					<div className="w-full max-w-sm rounded-2xl border border-border bg-background p-8 shadow-sm">
-						{/* Logo */}
 						<Link to="/" className="mb-6 flex items-center gap-2.5">
 							<img
 								src={logoImg}
@@ -177,13 +192,13 @@ function Login() {
 							<form className="space-y-4" onSubmit={handleSubmit}>
 								<div className="grid gap-2">
 									<Label htmlFor="email" className="font-body">
-										Email
+										Email or username
 									</Label>
 									<Input
 										id="email"
-										type="email"
-										placeholder="you@example.com"
-										autoComplete="email"
+										type="text"
+										placeholder="you@example.com or admin"
+										autoComplete="username"
 										value={email}
 										onChange={(event) => setEmail(event.target.value)}
 										required
@@ -223,7 +238,7 @@ function Login() {
 								) : null}
 								<Button
 									type="submit"
-									className="w-full font-body bg-primary hover:bg-primary/90"
+									className="w-full bg-primary font-body hover:bg-primary/90"
 									disabled={loginMutation.isPending}
 								>
 									{loginMutation.isPending
@@ -249,11 +264,28 @@ function Login() {
 	);
 }
 
+function roleBasedRedirect(roles: string[]): "/admin" | "/dashboard" {
+	if (roles.includes("Admin") || roles.includes("Staff")) {
+		return "/admin";
+	}
+	return "/dashboard";
+}
+
+async function fetchMe(): Promise<AuthUserResponse> {
+	const response = await authFetch(`${apiBaseUrl}/api/auth/me`, {
+		credentials: "include",
+	});
+	if (!response.ok) {
+		throw new Error("Unable to load user info.");
+	}
+	return response.json() as Promise<AuthUserResponse>;
+}
+
 async function submitLogin(input: {
 	email: string;
 	password: string;
 }): Promise<AuthChallengeResponse> {
-	const response = await fetch(`${apiBaseUrl}/api/auth/login`, {
+	const response = await authFetch(`${apiBaseUrl}/api/auth/login`, {
 		method: "POST",
 		credentials: "include",
 		headers: {
@@ -269,14 +301,17 @@ async function submitLogin(input: {
 	return response.json() as Promise<AuthChallengeResponse>;
 }
 
-async function verifyLoginCode(code: string): Promise<AuthUserResponse> {
-	const response = await fetch(`${apiBaseUrl}/api/auth/login/verify`, {
+async function verifyLoginCode(
+	code: string,
+	emailForChallenge: string,
+): Promise<AuthUserResponse> {
+	const response = await authFetch(`${apiBaseUrl}/api/auth/login/verify`, {
 		method: "POST",
 		credentials: "include",
 		headers: {
 			"Content-Type": "application/json",
 		},
-		body: JSON.stringify({ code }),
+		body: JSON.stringify({ code, email: emailForChallenge }),
 	});
 
 	if (!response.ok) {
@@ -286,10 +321,14 @@ async function verifyLoginCode(code: string): Promise<AuthUserResponse> {
 	return response.json() as Promise<AuthUserResponse>;
 }
 
-async function resendLoginCode(): Promise<void> {
-	const response = await fetch(`${apiBaseUrl}/api/auth/login/resend`, {
+async function resendLoginCode(emailForChallenge: string): Promise<void> {
+	const response = await authFetch(`${apiBaseUrl}/api/auth/login/resend`, {
 		method: "POST",
 		credentials: "include",
+		headers: {
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({ email: emailForChallenge }),
 	});
 
 	if (!response.ok) {
