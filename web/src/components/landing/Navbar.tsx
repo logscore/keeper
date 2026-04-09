@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Heart } from "lucide-react";
-import logoImg from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
 import { getApiBaseUrl, type AuthMeResponse, logout } from "../../lib/api";
 
@@ -40,11 +39,6 @@ export default function Navbar() {
       <nav className="w-full border-b border-border bg-white/95 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
           <Link to="/" className="flex items-center gap-3">
-            <img
-              src={logoImg}
-              alt="Keeper Logo"
-              className="h-9 w-9 rounded-lg object-cover"
-            />
             <span className="font-heading text-xl font-semibold tracking-tight text-foreground">
               Keeper
             </span>
