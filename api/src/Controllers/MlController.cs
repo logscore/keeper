@@ -73,4 +73,37 @@ public class MlController : ControllerBase
             return StatusCode(502, new { error = "ML service unreachable" });
         }
     }
+
+    [HttpGet("social/causal/features")]
+    public async Task<IActionResult> SocialCausalFeatures(CancellationToken ct)
+    {
+        try
+        {
+            var result = await _ml.GetFeaturesAsync("social/causal", ct);
+            return Ok(result);
+        }
+        catch (HttpRequestException)
+        {
+            return StatusCode(502, new { error = "ML service unreachable" });
+        }
+    }
+
+    [HttpPost("social/causal/predict")]
+    public async Task<IActionResult> SocialCausalPredict(
+        [FromBody] JsonElement body, CancellationToken ct)
+    {
+        try
+        {
+            var result = await _ml.PredictAsync("social/causal", body, ct);
+            return Ok(result);
+        }
+        catch (MlServiceException ex)
+        {
+            return StatusCode(ex.StatusCode, ex.ResponseBody);
+        }
+        catch (HttpRequestException)
+        {
+            return StatusCode(502, new { error = "ML service unreachable" });
+        }
+    }
 }

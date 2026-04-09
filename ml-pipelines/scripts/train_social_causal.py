@@ -62,6 +62,17 @@ def _build_preprocessor() -> ColumnTransformer:
 
 def _clean(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
+
+    # Derive post_dow and post_hour from created_at (matches train_social_engagement.py)
+    out["created_at"] = pd.to_datetime(out.get("created_at"), errors="coerce")
+    out["post_hour"] = out["created_at"].dt.hour.fillna(0).astype(int)
+    out["post_dow"] = out["created_at"].dt.day_name().astype("string").fillna("Unknown")
+
+    # Derive binary target from donation_referrals
+    if "has_referred_gift" not in out.columns:
+        referrals = pd.to_numeric(out.get("donation_referrals", 0), errors="coerce").fillna(0)
+        out["has_referred_gift"] = (referrals > 0).astype(int)
+
     for col in CAUSAL_NUMERIC_FEATURES:
         if col not in out.columns:
             out[col] = 0.0
@@ -113,8 +124,6 @@ def retrain(data_root: Path, artifact_path: Path) -> dict:
     """
     posts = pd.read_csv(data_root / "social_media_posts.csv", low_memory=False)
     posts = _clean(posts)
-
-    required = CAUSAL_FEATURE_COLUMNS + [TREATMENT, TARGET]
     posts = posts.dropna(subset=[TREATMENT, TARGET])
     posts[TREATMENT] = posts[TREATMENT].astype(int)
     posts[TARGET] = posts[TARGET].astype(int)
