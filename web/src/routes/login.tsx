@@ -86,22 +86,25 @@ function Login() {
 				return;
 			}
 
-			const user = await fetchMe();
-			await navigate({ to: roleBasedRedirect(user.roles) });
-		},
-	});
-	const verifyMutation = useMutation({
-		mutationFn: (code: string) =>
-			verifyLoginCode(code, (challenge?.email ?? email).trim()),
-		onSuccess: async (user) => {
-			queryClient.setQueryData(["auth", "me"], user);
-			await queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
-			await navigate({ to: roleBasedRedirect(user.roles) });
-		},
-	});
-	const resendMutation = useMutation({
-		mutationFn: () => resendLoginCode((challenge?.email ?? email).trim()),
-	});
+      const user = await fetchMe();
+      if (user) {
+        queryClient.setQueryData(["auth", "me"], user);
+      }
+      await navigate({ to: resolveRedirectPath(user) });
+    },
+  });
+  const verifyMutation = useMutation({
+    mutationFn: (code: string) =>
+      verifyLoginCode(code, (challenge?.email ?? email).trim()),
+    onSuccess: async (user) => {
+      queryClient.setQueryData(["auth", "me"], user);
+      await queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
+      await navigate({ to: resolveRedirectPath(user) });
+    },
+  });
+  const resendMutation = useMutation({
+    mutationFn: () => resendLoginCode((challenge?.email ?? email).trim()),
+  });
 
 	async function handleSubmit(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault();
@@ -264,21 +267,27 @@ function Login() {
 	);
 }
 
-function roleBasedRedirect(roles: string[]): "/admin" | "/dashboard" {
-	if (roles.includes("Admin") || roles.includes("Staff")) {
-		return "/admin";
-	}
-	return "/dashboard";
+function resolveRedirectPath(
+  user: AuthUserResponse | null | undefined,
+): "/admin" | "/dashboard" {
+  const roles = Array.isArray(user?.roles) ? user.roles : [];
+  return roles.includes("Admin") ? "/admin" : "/dashboard";
 }
 
-async function fetchMe(): Promise<AuthUserResponse> {
-	const response = await authFetch(`${apiBaseUrl}/api/auth/me`, {
-		credentials: "include",
-	});
-	if (!response.ok) {
-		throw new Error("Unable to load user info.");
-	}
-	return response.json() as Promise<AuthUserResponse>;
+async function fetchMe(): Promise<AuthUserResponse | null> {
+  const response = await fetch(`${apiBaseUrl}/api/auth/me`, {
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new Error("Unable to load user info.");
+  }
+  const data = (await response.json().catch(() => null)) as
+    | AuthUserResponse
+    | null;
+  if (!data || !Array.isArray(data.roles)) {
+    return null;
+  }
+  return data;
 }
 
 async function submitLogin(input: {

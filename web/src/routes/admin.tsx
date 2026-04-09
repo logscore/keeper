@@ -14,8 +14,9 @@ import CasesTable from "@/components/admin/CasesTable";
 import DonationTrends from "@/components/admin/DonationTrends";
 import OccupancyList from "@/components/admin/OccupancyList";
 import QuickActions from "@/components/admin/QuickActions";
-import { useAuth } from "@/hooks/use-auth";
-import { requireRole } from "@/lib/auth";
+import { apiGetJson, type AuthMeResponse } from "@/lib/api";
+import type { Resident, Donation, Safehouse } from "@/components/admin/AdminMetrics";
+import type { Activity } from "@/components/admin/ActivityFeed";
 
 export const Route = createFileRoute("/admin")({
 	beforeLoad: async ({ context }) => {
@@ -25,40 +26,36 @@ export const Route = createFileRoute("/admin")({
 });
 
 function AdminDashboard() {
-	const { user } = useAuth();
+  const { data: user } = useQuery({
+    queryKey: ["auth", "me"],
+    queryFn: async () => {
+      const me = await apiGetJson<AuthMeResponse>("/api/auth/me");
+      return {
+        email: me.email,
+        full_name: me.email?.split("@")[0] ?? "Admin",
+      };
+    }
+  });
 
-	const { data: residents = [], isLoading: residentsLoading } = useQuery<
-		Resident[]
-	>({
-		queryKey: ["admin", "residents"],
-		queryFn: async () => {
-			if (!getApiBaseUrl()) return [];
-			return apiGetJson<Resident[]>("/api/admin/residents");
-		},
-	});
+  const { data: residents = [], isLoading: residentsLoading } = useQuery<Resident[]>({
+    queryKey: ["residents"],
+    queryFn: () => apiGetJson<Resident[]>("/api/admin-data/residents"),
+  });
 
-	const { data: donations = [], isLoading: donationsLoading } = useQuery<
-		Donation[]
-	>({
-		queryKey: ["admin", "donations", "recent"],
-		queryFn: async () => {
-			if (!getApiBaseUrl()) return [];
-			return apiGetJson<Donation[]>("/api/admin/donations/recent?take=500");
-		},
-	});
+  const { data: donations = [], isLoading: donationsLoading } = useQuery<Donation[]>({
+    queryKey: ["donations"],
+    queryFn: () => apiGetJson<Donation[]>("/api/admin-data/donations"),
+  });
 
-	const { data: safehouses = [], isLoading: safehousesLoading } = useQuery<
-		Safehouse[]
-	>({
-		queryKey: ["admin", "safehouses"],
-		queryFn: async () => {
-			if (!getApiBaseUrl()) return [];
-			return apiGetJson<Safehouse[]>("/api/admin/safehouses");
-		},
-	});
+  const { data: safehouses = [], isLoading: safehousesLoading } = useQuery<Safehouse[]>({
+    queryKey: ["safehouses"],
+    queryFn: () => apiGetJson<Safehouse[]>("/api/admin-data/safehouses"),
+  });
 
-	/** Placeholder until quick actions / audit feed are wired. */
-	const activities: Activity[] = [];
+  const { data: activities = [], isLoading: activitiesLoading } = useQuery<Activity[]>({
+    queryKey: ["activities"],
+    queryFn: () => apiGetJson<Activity[]>("/api/admin-data/activities"),
+  });
 
 	const loading = residentsLoading || donationsLoading || safehousesLoading;
 

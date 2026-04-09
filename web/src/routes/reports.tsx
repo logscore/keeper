@@ -1,6 +1,23 @@
 import { createFileRoute } from "@tanstack/react-router";
-import html2canvas from "html2canvas";
-import { jsPDF } from "jspdf";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import AdminSidebar from "@/components/admin/AdminSidebar";
+import { apiGetJson, type AuthMeResponse } from "@/lib/api";
+import {
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 import {
 	BookOpen,
 	FileText,
@@ -62,61 +79,19 @@ const C_PINK = "hsl(330, 65%, 55%)"; // pink
 
 const PIE_COLORS = [C_PRIMARY, C_YELLOW, C_PURPLE, C_GREEN];
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
-// TODO: Replace with C# API calls filtered by reportYear
-
-const DONATION_TREND = [
-	{ month: "Jan", amount: 175000 },
-	{ month: "Feb", amount: 82000 },
-	{ month: "Mar", amount: 95000 },
-	{ month: "Apr", amount: 220000 },
-	{ month: "May", amount: 148000 },
-	{ month: "Jun", amount: 67000 },
-	{ month: "Jul", amount: 95000 },
-	{ month: "Aug", amount: 135000 },
-	{ month: "Sep", amount: 88000 },
-	{ month: "Oct", amount: 175000 },
-	{ month: "Nov", amount: 250000 },
-	{ month: "Dec", amount: 310000 },
-];
-
-const SAFEHOUSE_PERFORMANCE = [
-	{ name: "Tahanan ng Pag-asa", admitted: 12, active: 8, graduated: 4 },
-	{ name: "Bagong Simula Center", admitted: 7, active: 5, graduated: 2 },
-	{ name: "Kalayaan Shelter", admitted: 9, active: 6, graduated: 3 },
-];
-
-const REINTEGRATION_OUTCOMES = [
-	{ label: "Family Reunification", value: 6 },
-	{ label: "Independent Living", value: 3 },
-	{ label: "Referred Elsewhere", value: 2 },
-	{ label: "Case Closed", value: 1 },
-];
-
-const SERVICES_BY_QUARTER = [
-	{ quarter: "Q1", caring: 85, healing: 42, teaching: 28 },
-	{ quarter: "Q2", caring: 92, healing: 51, teaching: 35 },
-	{ quarter: "Q3", caring: 78, healing: 38, teaching: 31 },
-	{ quarter: "Q4", caring: 96, healing: 55, teaching: 42 },
-];
-
-const CASE_CATEGORIES = [
-	{ category: "Trafficked", count: 8 },
-	{ category: "Physical Abuse", count: 6 },
-	{ category: "Neglected", count: 4 },
-	{ category: "Sexual Abuse", count: 4 },
-	{ category: "Psychological Abuse", count: 3 },
-	{ category: "Economic Abuse", count: 2 },
-	{ category: "Abandoned", count: 1 },
-];
-
-const OUTCOME_INDICATORS = [
-	{ label: "Psychosocial Wellbeing", pct: 82 },
-	{ label: "Educational Continuity", pct: 78 },
-	{ label: "Livelihood Readiness", pct: 71 },
-	{ label: "Family Reintegration Readiness", pct: 65 },
-	{ label: "Legal Matters Resolved", pct: 58 },
-];
+type ReportsSummary = {
+  donationTrend: { month: string; amount: number }[];
+  safehousePerformance: {
+    name: string;
+    admitted: number;
+    active: number;
+    graduated: number;
+  }[];
+  reintegrationOutcomes: { label: string; value: number }[];
+  servicesByQuarter: { quarter: string; caring: number; healing: number; teaching: number }[];
+  caseCategories: { label: string; value: number }[];
+  outcomeIndicators: { label: string; pct: number }[];
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -179,522 +154,863 @@ function PieLabel({
 // ─── Main component ───────────────────────────────────────────────────────────
 
 function ReportsPage() {
-	const [reportYear, setReportYear] = useState(2025);
-	const [exporting, setExporting] = useState(false);
-	const contentRef = useRef<HTMLElement>(null);
+  const [reportYear, setReportYear] = useState(2025);
 
-	const { user } = useAuth();
+  const { data: user } = useQuery({
+    queryKey: ["auth", "me"],
+    queryFn: () => apiGetJson<AuthMeResponse>("/api/auth/me"),
+    retry: false,
+    staleTime: 60_000,
+  });
 
-	async function handleExportPDF() {
-		if (!contentRef.current) return;
-		setExporting(true);
-		try {
-			const canvas = await html2canvas(contentRef.current, {
-				scale: 2,
-				useCORS: true,
-				backgroundColor: "#ffffff",
-			});
-			const imgData = canvas.toDataURL("image/png");
-			const pdf = new jsPDF({ orientation: "portrait", unit: "px", format: "a4" });
-			const pageWidth = pdf.internal.pageSize.getWidth();
-			const pageHeight = pdf.internal.pageSize.getHeight();
-			const imgWidth = pageWidth;
-			const imgHeight = (canvas.height * pageWidth) / canvas.width;
-			let y = 0;
-			while (y < imgHeight) {
-				if (y > 0) pdf.addPage();
-				pdf.addImage(imgData, "PNG", 0, -y, imgWidth, imgHeight);
-				y += pageHeight;
-			}
-			pdf.save(`keeper-report-${reportYear}.pdf`);
-		} finally {
-			setExporting(false);
-		}
-	}
+  const { data: reportsSummary } = useQuery({
+    queryKey: ["reports-summary", reportYear],
+    queryFn: () =>
+      apiGetJson<ReportsSummary>(`/api/admin-data/reports-summary?year=${reportYear}`),
+    staleTime: 60_000,
+    retry: false,
+  });
 
-	const totalDonations = DONATION_TREND.reduce((s, d) => s + d.amount, 0);
-	const totalResidents = SAFEHOUSE_PERFORMANCE.reduce(
-		(s, sh) => s + sh.admitted,
-		0,
-	);
-	const totalReintegrated = REINTEGRATION_OUTCOMES.reduce(
-		(s, o) => s + o.value,
-		0,
-	);
-	const totalServices = SERVICES_BY_QUARTER.reduce(
-		(s, q) => s + q.caring + q.healing + q.teaching,
-		0,
-	);
+  const donationTrend = reportsSummary?.donationTrend ?? [];
+  const safehousePerformance = reportsSummary?.safehousePerformance ?? [];
+  const reintegrationOutcomes = reportsSummary?.reintegrationOutcomes ?? [];
+  const servicesByQuarter = reportsSummary?.servicesByQuarter ?? [];
+  const caseCategories = (reportsSummary?.caseCategories ?? []).map((c) => ({
+    category: c.label,
+    count: c.value,
+  }));
+  const outcomeIndicators = reportsSummary?.outcomeIndicators ?? [];
 
-	const aarCaring = SERVICES_BY_QUARTER.reduce((s, q) => s + q.caring, 0);
-	const aarHealing = SERVICES_BY_QUARTER.reduce((s, q) => s + q.healing, 0);
-	const aarTeaching = SERVICES_BY_QUARTER.reduce((s, q) => s + q.teaching, 0);
+  // ── ML Predictions (sample inputs — swap for real DB data when ready) ────────
+  const ML_HEADERS = { "Content-Type": "application/json" };
 
-	return (
-		<div className="min-h-screen bg-background font-body">
-			<AdminSidebar user={user ?? null} />
+  const { data: mlRetention, isLoading: retentionLoading } = useQuery({
+    queryKey: ["ml", "retention", "sample"],
+    queryFn: () =>
+      apiGetJson<{ predicted_class: number; label: string; probability_lapsed: number; probability_retained: number }>(
+        "/api/ml/retention/predict",
+        {
+          method: "POST",
+          headers: ML_HEADERS,
+          body: JSON.stringify({
+            frequency: 3,
+            avg_monetary_value: 5000,
+            social_referral_count: 1,
+            is_recurring_donor: 0,
+            top_program_interest: "Education",
+          }),
+        }
+      ),
+    staleTime: Infinity,
+    retry: false,
+  });
 
-			<main ref={contentRef} className="ml-64 p-8">
-				{/* ── Page header ─────────────────────────────────────────────────── */}
-				<div className="flex items-start justify-between mb-8">
-					<div>
-						<h1 className="font-heading text-3xl font-bold text-foreground">
-							Reports & Analytics
-						</h1>
-						<p className="font-body text-base text-muted-foreground mt-1">
-							Aggregated insights aligned with the Annual Accomplishment Report
-							format.
-						</p>
-					</div>
-					<div className="flex items-center gap-3 mt-1">
-						<select
-							value={reportYear}
-							onChange={(e) => setReportYear(Number(e.target.value))}
-							className="h-9 rounded-3xl border border-transparent bg-input/50 px-4 text-sm font-body text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
-						>
-							{[2023, 2024, 2025].map((y) => (
-								<option key={y} value={y}>
-									{y}
-								</option>
-							))}
-						</select>
-						<button
-							type="button"
-							onClick={handleExportPDF}
-							className="inline-flex items-center gap-2 h-9 px-4 rounded-3xl border border-border bg-card text-sm font-body text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
-						>
-							{exporting ? (
-								<Loader2 className="h-4 w-4 animate-spin" />
-							) : (
-								<FileText className="h-4 w-4" />
-							)}
-							{exporting ? "Exporting…" : "Export PDF"}
-						</button>
-					</div>
-				</div>
+  const { data: mlGrowth, isLoading: growthLoading } = useQuery({
+    queryKey: ["ml", "growth", "sample"],
+    queryFn: () =>
+      apiGetJson<{ predicted_total_monetary_value: number }>(
+        "/api/ml/growth/predict",
+        {
+          method: "POST",
+          headers: ML_HEADERS,
+          body: JSON.stringify({
+            recency_days: 45,
+            frequency: 3,
+            social_referral_count: 1,
+            is_recurring_donor: 0,
+            donor_tenure_days: 730,
+            top_program_interest: "Education",
+            supporter_type: "Individual",
+            relationship_type: "Donor",
+            region: "NCR",
+            acquisition_channel: "Online",
+            status: "Active",
+          }),
+        }
+      ),
+    staleTime: Infinity,
+    retry: false,
+  });
 
-				{/* ── Annual Accomplishment Report pillars ─────────────────────────── */}
-				<div className="bg-[#FDFBF7] border-t-4 border-t-yellow-500 rounded-2xl p-6 mb-8 shadow-sm">
-					<div className="flex items-center gap-2 mb-5">
-						<TrendingUp className="h-5 w-5 text-yellow-600" />
-						<h2 className="font-heading text-lg font-bold text-foreground">
-							Annual Accomplishment Report — {reportYear}
-						</h2>
-						<span className="font-body text-xs text-muted-foreground ml-1">
-							Philippine DSWD reporting format
-						</span>
-					</div>
+  const { data: mlGirlsProgress, isLoading: progressLoading } = useQuery({
+    queryKey: ["ml", "girls-progress", "sample"],
+    queryFn: () =>
+      apiGetJson<{ predicted_mean_progress: number }>(
+        "/api/ml/girls-progress/predict",
+        {
+          method: "POST",
+          headers: ML_HEADERS,
+          body: JSON.stringify({
+            present_age_years: 14,
+            length_stay_years: 1.5,
+            age_upon_admission_years: 12,
+            edu_earliest_progress: 60,
+            edu_earliest_attendance_rate: 0.85,
+            hw_mean_general_health_score: 7,
+            hw_mean_nutrition_score: 7,
+            case_status: "Active",
+            case_category: "Trafficked",
+            initial_risk_level: "High",
+            current_risk_level: "Medium",
+          }),
+        }
+      ),
+    staleTime: Infinity,
+    retry: false,
+  });
 
-					<div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-						{/* Total Beneficiaries */}
-						<div className="bg-card rounded-2xl border border-border p-5">
-							<div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10 text-primary mb-3">
-								<Users className="h-5 w-5" />
-							</div>
-							<div className="font-heading text-3xl font-bold text-foreground">
-								{totalResidents}
-							</div>
-							<div className="font-body text-sm font-semibold text-foreground mt-0.5">
-								Total Beneficiaries
-							</div>
-							<div className="font-body text-xs text-muted-foreground">
-								Residents admitted this year
-							</div>
-						</div>
+  const { data: mlSocialEngagement, isLoading: socialEngagementLoading } = useQuery({
+    queryKey: ["ml", "social", "sample"],
+    queryFn: () =>
+      apiGetJson<{ predicted_engagement_rate: number }>(
+        "/api/ml/social/predict",
+        {
+          method: "POST",
+          headers: ML_HEADERS,
+          body: JSON.stringify({
+            caption_length: 180,
+            num_hashtags: 5,
+            boost_budget_php: 0,
+            follower_count_at_post: 3500,
+            post_hour: 10,
+            has_call_to_action: 1,
+            is_boosted: 0,
+            platform: "Facebook",
+            post_type: "Photo",
+            media_type: "Image",
+            content_topic: "Impact Story",
+            sentiment_tone: "Inspirational",
+            post_dow: "Tuesday",
+            call_to_action_type: "Donate",
+          }),
+        }
+      ),
+    staleTime: Infinity,
+    retry: false,
+  });
 
-						{/* Caring */}
-						<div className="bg-card rounded-2xl border border-border p-5">
-							<div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-yellow-100 text-yellow-700 mb-3">
-								<Home className="h-5 w-5" />
-							</div>
-							<div className="font-heading text-3xl font-bold text-foreground">
-								{aarCaring}
-							</div>
-							<div className="font-body text-sm font-semibold text-foreground mt-0.5">
-								Caring
-							</div>
-							<div className="font-body text-xs text-muted-foreground">
-								Shelter, food & safety service days
-							</div>
-						</div>
+  const { data: mlSocialCausal, isLoading: socialCausalLoading } = useQuery({
+    queryKey: ["ml", "social-causal", "sample"],
+    queryFn: () =>
+      apiGetJson<{ estimated_ite: number; p_outcome_if_boosted: number; p_outcome_if_not_boosted: number; ate: number }>(
+        "/api/ml/social/causal/predict",
+        {
+          method: "POST",
+          headers: ML_HEADERS,
+          body: JSON.stringify({
+            caption_length: 180,
+            num_hashtags: 5,
+            follower_count_at_post: 3500,
+            post_hour: 10,
+            has_call_to_action: 1,
+            boost_budget_php: 500,
+            platform: "Facebook",
+            post_type: "Photo",
+            media_type: "Image",
+            content_topic: "Impact Story",
+            sentiment_tone: "Inspirational",
+            post_dow: "Tuesday",
+            call_to_action_type: "Donate",
+          }),
+        }
+      ),
+    staleTime: Infinity,
+    retry: false,
+  });
 
-						{/* Healing */}
-						<div className="bg-card rounded-2xl border border-border p-5">
-							<div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-purple-100 text-purple-700 mb-3">
-								<Heart className="h-5 w-5" />
-							</div>
-							<div className="font-heading text-3xl font-bold text-foreground">
-								{aarHealing}
-							</div>
-							<div className="font-body text-sm font-semibold text-foreground mt-0.5">
-								Healing
-							</div>
-							<div className="font-body text-xs text-muted-foreground">
-								Counseling & psychosocial sessions
-							</div>
-						</div>
+  const { data: mlTrajectory, isLoading: trajectoryLoading } = useQuery({
+    queryKey: ["ml", "girls-trajectory", "sample"],
+    queryFn: () =>
+      apiGetJson<{ predicted_next_progress: number; risk_label: string | null }>(
+        "/api/ml/girls-trajectory/predict",
+        {
+          method: "POST",
+          headers: ML_HEADERS,
+          body: JSON.stringify({
+            current_progress: 65,
+            days_since_admission: 180,
+            present_age_years: 14,
+            age_upon_admission_years: 12,
+            has_special_needs: 0,
+            hw_mean_general_health_score: 7,
+            hw_mean_nutrition_score: 7,
+            hw_mean_energy_level_score: 7,
+            hw_mean_sleep_quality_score: 7,
+            n_incidents: 1,
+            n_home_visitations: 3,
+            n_intervention_plans: 2,
+            case_status: "Active",
+            case_category: "Trafficked",
+            initial_risk_level: "High",
+            current_risk_level: "Medium",
+          }),
+        }
+      ),
+    staleTime: Infinity,
+    retry: false,
+  });
 
-						{/* Teaching */}
-						<div className="bg-card rounded-2xl border border-border p-5">
-							<div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-blue-100 text-blue-700 mb-3">
-								<BookOpen className="h-5 w-5" />
-							</div>
-							<div className="font-heading text-3xl font-bold text-foreground">
-								{aarTeaching}
-							</div>
-							<div className="font-body text-sm font-semibold text-foreground mt-0.5">
-								Teaching
-							</div>
-							<div className="font-body text-xs text-muted-foreground">
-								Livelihood & education trainings
-							</div>
-						</div>
-					</div>
+  const totalDonations = donationTrend.reduce((s, d) => s + d.amount, 0);
+  const totalResidents = safehousePerformance.reduce(
+    (s, sh) => s + sh.admitted,
+    0
+  );
+  const totalReintegrated = reintegrationOutcomes.reduce(
+    (s, o) => s + o.value,
+    0
+  );
+  const totalServices = servicesByQuarter.reduce(
+    (s, q) => s + q.caring + q.healing + q.teaching,
+    0
+  );
 
-					{/* AAR service totals row */}
-					<div className="mt-4 grid grid-cols-3 gap-3 text-center">
-						{[
-							{
-								label: "Total Services Rendered",
-								value: totalServices,
-								color: "text-foreground",
-							},
-							{
-								label: "Successfully Reintegrated",
-								value: totalReintegrated,
-								color: "text-primary",
-							},
-							{
-								label: "Total Contributions Received",
-								value: `₱${totalDonations.toLocaleString("en-PH")}`,
-								color: "text-yellow-700",
-							},
-						].map((s) => (
-							<div
-								key={s.label}
-								className="bg-background rounded-xl border border-border py-3 px-4"
-							>
-								<div className={`font-heading text-xl font-bold ${s.color}`}>
-									{s.value}
-								</div>
-								<div className="font-body text-xs text-muted-foreground mt-0.5">
-									{s.label}
-								</div>
-							</div>
-						))}
-					</div>
-				</div>
+  const aarCaring = servicesByQuarter.reduce((s, q) => s + q.caring, 0);
+  const aarHealing = servicesByQuarter.reduce((s, q) => s + q.healing, 0);
+  const aarTeaching = servicesByQuarter.reduce((s, q) => s + q.teaching, 0);
 
-				{/* ── Donation Trends ──────────────────────────────────────────────── */}
-				<div className="mb-8">
-					<SectionHeader
-						title="Donation Trends"
-						subtitle="Monthly monetary contributions across all campaigns"
-					/>
-					<div className="bg-card rounded-2xl border border-border shadow-sm p-6">
-						<ResponsiveContainer width="100%" height={260}>
-							<AreaChart data={DONATION_TREND}>
-								<defs>
-									<linearGradient id="donGrad" x1="0" y1="0" x2="0" y2="1">
-										<stop
-											offset="5%"
-											stopColor={C_PRIMARY}
-											stopOpacity={0.25}
-										/>
-										<stop offset="95%" stopColor={C_PRIMARY} stopOpacity={0} />
-									</linearGradient>
-								</defs>
-								<CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
-								<XAxis
-									dataKey="month"
-									tick={TICK_STYLE}
-									axisLine={false}
-									tickLine={false}
-								/>
-								<YAxis
-									tick={TICK_STYLE}
-									axisLine={false}
-									tickLine={false}
-									tickFormatter={formatPHP}
-									width={56}
-								/>
-								<Tooltip
-									formatter={(v) => [
-										`₱${Number(v).toLocaleString("en-PH")}`,
-										"Amount",
-									]}
-									contentStyle={TOOLTIP_STYLE}
-								/>
-								<Area
-									type="monotone"
-									dataKey="amount"
-									stroke={C_PRIMARY}
-									strokeWidth={2}
-									fill="url(#donGrad)"
-								/>
-							</AreaChart>
-						</ResponsiveContainer>
-					</div>
-				</div>
+  return (
+    <div className="min-h-screen bg-background font-body">
+      <AdminSidebar user={user ?? null} />
 
-				{/* ── Safehouse Performance + Reintegration Outcomes ───────────────── */}
-				<div className="grid lg:grid-cols-2 gap-6 mb-8">
-					{/* Safehouse Performance */}
-					<div>
-						<SectionHeader
-							title="Safehouse Performance"
-							subtitle="Residents admitted, active, and graduated per safehouse"
-						/>
-						<div className="bg-card rounded-2xl border border-border shadow-sm p-6">
-							<ResponsiveContainer width="100%" height={240}>
-								<BarChart data={SAFEHOUSE_PERFORMANCE} barCategoryGap="30%">
-									<CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
-									<XAxis
-										dataKey="name"
-										tick={{ ...TICK_STYLE, fontSize: 10 }}
-										axisLine={false}
-										tickLine={false}
-										width={60}
-									/>
-									<YAxis
-										tick={TICK_STYLE}
-										axisLine={false}
-										tickLine={false}
-										allowDecimals={false}
-									/>
-									<Tooltip contentStyle={TOOLTIP_STYLE} />
-									<Legend
-										iconType="circle"
-										iconSize={8}
-										wrapperStyle={{ fontFamily: "Inter", fontSize: 12 }}
-									/>
-									<Bar
-										dataKey="admitted"
-										name="Admitted"
-										fill={C_BLUE}
-										radius={[4, 4, 0, 0]}
-									/>
-									<Bar
-										dataKey="active"
-										name="Active"
-										fill={C_PRIMARY}
-										radius={[4, 4, 0, 0]}
-									/>
-									<Bar
-										dataKey="graduated"
-										name="Graduated"
-										fill={C_GREEN}
-										radius={[4, 4, 0, 0]}
-									/>
-								</BarChart>
-							</ResponsiveContainer>
-						</div>
-					</div>
+      <main className="ml-64 p-8">
+        {/* ── Page header ─────────────────────────────────────────────────── */}
+        <div className="flex items-start justify-between mb-8">
+          <div>
+            <h1 className="font-heading text-3xl font-bold text-foreground">
+              Reports & Analytics
+            </h1>
+            <p className="font-body text-base text-muted-foreground mt-1">
+              Aggregated insights aligned with the Annual Accomplishment Report
+              format.
+            </p>
+          </div>
+          <div className="flex items-center gap-3 mt-1">
+            <select
+              value={reportYear}
+              onChange={(e) => setReportYear(Number(e.target.value))}
+              className="h-9 rounded-3xl border border-transparent bg-input/50 px-4 text-sm font-body text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
+            >
+              {[2023, 2024, 2025].map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+            {/* TODO: Wire to PDF export */}
+            <button className="inline-flex items-center gap-2 h-9 px-4 rounded-3xl border border-border bg-card text-sm font-body text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors">
+              <FileText className="h-4 w-4" />
+              Export PDF
+            </button>
+          </div>
+        </div>
 
-					{/* Reintegration Outcomes */}
-					<div>
-						<SectionHeader
-							title="Reintegration Outcomes"
-							subtitle={`${totalReintegrated} cases completed the reintegration process`}
-						/>
-						<div className="bg-card rounded-2xl border border-border shadow-sm p-6">
-							<ResponsiveContainer width="100%" height={240}>
-								<PieChart>
-									<Pie
-										data={REINTEGRATION_OUTCOMES}
-										dataKey="value"
-										nameKey="label"
-										cx="50%"
-										cy="50%"
-										outerRadius={90}
-										labelLine={false}
-										label={PieLabel}
-									>
-										{REINTEGRATION_OUTCOMES.map((entry, i) => (
-											<Cell
-												key={entry.label}
-												fill={PIE_COLORS[i % PIE_COLORS.length]}
-											/>
-										))}
-									</Pie>
-									<Tooltip
-										formatter={(v, name) => [`${v} residents`, name]}
-										contentStyle={TOOLTIP_STYLE}
-									/>
-									<Legend
-										iconType="circle"
-										iconSize={8}
-										formatter={(value) => value}
-										wrapperStyle={{ fontFamily: "Inter", fontSize: 11 }}
-									/>
-								</PieChart>
-							</ResponsiveContainer>
-						</div>
-					</div>
-				</div>
+        {/* ── Annual Accomplishment Report pillars ─────────────────────────── */}
+        <div className="bg-[#FDFBF7] border-t-4 border-t-yellow-500 rounded-2xl p-6 mb-8 shadow-sm">
+          <div className="flex items-center gap-2 mb-5">
+            <TrendingUp className="h-5 w-5 text-yellow-600" />
+            <h2 className="font-heading text-lg font-bold text-foreground">
+              Annual Accomplishment Report — {reportYear}
+            </h2>
+            <span className="font-body text-xs text-muted-foreground ml-1">
+              Philippine DSWD reporting format
+            </span>
+          </div>
 
-				{/* ── Services by Quarter + Case Category Distribution ──────────────── */}
-				<div className="grid lg:grid-cols-2 gap-6 mb-8">
-					{/* Services by Quarter */}
-					<div>
-						<SectionHeader
-							title="Services by Quarter"
-							subtitle="Caring, Healing, and Teaching service counts per quarter"
-						/>
-						<div className="bg-card rounded-2xl border border-border shadow-sm p-6">
-							<ResponsiveContainer width="100%" height={240}>
-								<BarChart data={SERVICES_BY_QUARTER} barCategoryGap="28%">
-									<CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
-									<XAxis
-										dataKey="quarter"
-										tick={TICK_STYLE}
-										axisLine={false}
-										tickLine={false}
-									/>
-									<YAxis
-										tick={TICK_STYLE}
-										axisLine={false}
-										tickLine={false}
-										allowDecimals={false}
-									/>
-									<Tooltip contentStyle={TOOLTIP_STYLE} />
-									<Legend
-										iconType="circle"
-										iconSize={8}
-										wrapperStyle={{ fontFamily: "Inter", fontSize: 12 }}
-									/>
-									<Bar
-										dataKey="caring"
-										name="Caring"
-										fill={C_YELLOW}
-										radius={[4, 4, 0, 0]}
-									/>
-									<Bar
-										dataKey="healing"
-										name="Healing"
-										fill={C_PURPLE}
-										radius={[4, 4, 0, 0]}
-									/>
-									<Bar
-										dataKey="teaching"
-										name="Teaching"
-										fill={C_BLUE}
-										radius={[4, 4, 0, 0]}
-									/>
-								</BarChart>
-							</ResponsiveContainer>
-						</div>
-					</div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Total Beneficiaries */}
+            <div className="bg-card rounded-2xl border border-border p-5">
+              <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10 text-primary mb-3">
+                <Users className="h-5 w-5" />
+              </div>
+              <div className="font-heading text-3xl font-bold text-foreground">
+                {totalResidents}
+              </div>
+              <div className="font-body text-sm font-semibold text-foreground mt-0.5">
+                Total Beneficiaries
+              </div>
+              <div className="font-body text-xs text-muted-foreground">
+                Residents admitted this year
+              </div>
+            </div>
 
-					{/* Case Category Distribution */}
-					<div>
-						<SectionHeader
-							title="Beneficiaries by Case Category"
-							subtitle="Distribution of admitted residents by case type"
-						/>
-						<div className="bg-card rounded-2xl border border-border shadow-sm p-6">
-							<ResponsiveContainer width="100%" height={240}>
-								<BarChart
-									data={CASE_CATEGORIES}
-									layout="vertical"
-									margin={{ left: 8, right: 24 }}
-									barCategoryGap="20%"
-								>
-									<CartesianGrid
-										strokeDasharray="3 3"
-										stroke={GRID_COLOR}
-										horizontal={false}
-									/>
-									<XAxis
-										type="number"
-										tick={TICK_STYLE}
-										axisLine={false}
-										tickLine={false}
-										allowDecimals={false}
-									/>
-									<YAxis
-										type="category"
-										dataKey="category"
-										tick={{ ...TICK_STYLE, fontSize: 10 }}
-										axisLine={false}
-										tickLine={false}
-										width={120}
-									/>
-									<Tooltip contentStyle={TOOLTIP_STYLE} />
-									<Bar
-										dataKey="count"
-										name="Residents"
-										fill={C_PINK}
-										radius={[0, 4, 4, 0]}
-									/>
-								</BarChart>
-							</ResponsiveContainer>
-						</div>
-					</div>
-				</div>
+            {/* Caring */}
+            <div className="bg-card rounded-2xl border border-border p-5">
+              <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-yellow-100 text-yellow-700 mb-3">
+                <Home className="h-5 w-5" />
+              </div>
+              <div className="font-heading text-3xl font-bold text-foreground">
+                {aarCaring}
+              </div>
+              <div className="font-body text-sm font-semibold text-foreground mt-0.5">
+                Caring
+              </div>
+              <div className="font-body text-xs text-muted-foreground">
+                Shelter, food & safety service days
+              </div>
+            </div>
 
-				{/* ── Resident Outcome Indicators ──────────────────────────────────── */}
-				<div className="mb-8">
-					<SectionHeader
-						title="Resident Outcome Indicators"
-						subtitle="Average improvement rates across key program outcomes for graduates"
-					/>
-					<div className="bg-card rounded-2xl border border-border shadow-sm p-6">
-						<div className="space-y-5 max-w-2xl">
-							{OUTCOME_INDICATORS.map((o) => (
-								<div key={o.label}>
-									<div className="flex justify-between items-baseline mb-1.5">
-										<span className="font-body text-sm font-medium text-foreground">
-											{o.label}
-										</span>
-										<span className="font-heading text-sm font-bold text-foreground">
-											{o.pct}%
-										</span>
-									</div>
-									<div className="relative h-2.5 w-full bg-muted rounded-full overflow-hidden">
-										<div
-											className="absolute left-0 top-0 h-full rounded-full transition-all"
-											style={{
-												width: `${o.pct}%`,
-												background:
-													o.pct >= 75
-														? C_PRIMARY
-														: o.pct >= 60
-															? C_YELLOW
-															: C_PURPLE,
-											}}
-										/>
-									</div>
-								</div>
-							))}
-						</div>
-						<p className="font-body text-xs text-muted-foreground mt-5">
-							Indicators measured at case closure through standardized welfare
-							assessment forms. Target threshold: 70%.
-						</p>
-					</div>
-				</div>
+            {/* Healing */}
+            <div className="bg-card rounded-2xl border border-border p-5">
+              <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-purple-100 text-purple-700 mb-3">
+                <Heart className="h-5 w-5" />
+              </div>
+              <div className="font-heading text-3xl font-bold text-foreground">
+                {aarHealing}
+              </div>
+              <div className="font-body text-sm font-semibold text-foreground mt-0.5">
+                Healing
+              </div>
+              <div className="font-body text-xs text-muted-foreground">
+                Counseling & psychosocial sessions
+              </div>
+            </div>
 
-				{/* ── Data note ────────────────────────────────────────────────────── */}
-				<div className="bg-muted/50 rounded-2xl border border-border p-5 flex items-start gap-3">
-					<FileText className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
-					<div>
-						<p className="font-body text-sm font-medium text-foreground mb-0.5">
-							Mock Data — Backend Not Yet Connected
-						</p>
-						<p className="font-body text-xs text-muted-foreground leading-relaxed">
-							All figures shown are representative sample data. Wire each
-							chart's data source to the corresponding C# API endpoint. The year
-							selector state (
-							<code className="font-mono bg-muted px-1 rounded">
-								reportYear
-							</code>
-							) should be passed as a query parameter to filter results by
-							reporting period.
-						</p>
-					</div>
-				</div>
-			</main>
-		</div>
-	);
+            {/* Teaching */}
+            <div className="bg-card rounded-2xl border border-border p-5">
+              <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-blue-100 text-blue-700 mb-3">
+                <BookOpen className="h-5 w-5" />
+              </div>
+              <div className="font-heading text-3xl font-bold text-foreground">
+                {aarTeaching}
+              </div>
+              <div className="font-body text-sm font-semibold text-foreground mt-0.5">
+                Teaching
+              </div>
+              <div className="font-body text-xs text-muted-foreground">
+                Livelihood & education trainings
+              </div>
+            </div>
+          </div>
+
+          {/* AAR service totals row */}
+          <div className="mt-4 grid grid-cols-3 gap-3 text-center">
+            {[
+              {
+                label: "Total Services Rendered",
+                value: totalServices,
+                color: "text-foreground",
+              },
+              {
+                label: "Successfully Reintegrated",
+                value: totalReintegrated,
+                color: "text-primary",
+              },
+              {
+                label: "Total Contributions Received",
+                value: `₱${totalDonations.toLocaleString("en-PH")}`,
+                color: "text-yellow-700",
+              },
+            ].map((s) => (
+              <div
+                key={s.label}
+                className="bg-background rounded-xl border border-border py-3 px-4"
+              >
+                <div className={`font-heading text-xl font-bold ${s.color}`}>
+                  {s.value}
+                </div>
+                <div className="font-body text-xs text-muted-foreground mt-0.5">
+                  {s.label}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Donation Trends ──────────────────────────────────────────────── */}
+        <div className="mb-8">
+          <SectionHeader
+            title="Donation Trends"
+            subtitle="Monthly monetary contributions across all campaigns"
+          />
+          <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
+            <ResponsiveContainer width="100%" height={260}>
+              <AreaChart data={donationTrend}>
+                <defs>
+                  <linearGradient id="donGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop
+                      offset="5%"
+                      stopColor={C_PRIMARY}
+                      stopOpacity={0.25}
+                    />
+                    <stop offset="95%" stopColor={C_PRIMARY} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
+                <XAxis
+                  dataKey="month"
+                  tick={TICK_STYLE}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={TICK_STYLE}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={formatPHP}
+                  width={56}
+                />
+                <Tooltip
+                  formatter={(v) => [
+                    `₱${Number(v).toLocaleString("en-PH")}`,
+                    "Amount",
+                  ]}
+                  contentStyle={TOOLTIP_STYLE}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="amount"
+                  stroke={C_PRIMARY}
+                  strokeWidth={2}
+                  fill="url(#donGrad)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* ── Safehouse Performance + Reintegration Outcomes ───────────────── */}
+        <div className="grid lg:grid-cols-2 gap-6 mb-8">
+          {/* Safehouse Performance */}
+          <div>
+            <SectionHeader
+              title="Safehouse Performance"
+              subtitle="Residents admitted, active, and graduated per safehouse"
+            />
+            <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={safehousePerformance} barCategoryGap="30%">
+                  <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ ...TICK_STYLE, fontSize: 10 }}
+                    axisLine={false}
+                    tickLine={false}
+                    width={60}
+                  />
+                  <YAxis
+                    tick={TICK_STYLE}
+                    axisLine={false}
+                    tickLine={false}
+                    allowDecimals={false}
+                  />
+                  <Tooltip contentStyle={TOOLTIP_STYLE} />
+                  <Legend
+                    iconType="circle"
+                    iconSize={8}
+                    wrapperStyle={{ fontFamily: "Inter", fontSize: 12 }}
+                  />
+                  <Bar
+                    dataKey="admitted"
+                    name="Admitted"
+                    fill={C_BLUE}
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Bar
+                    dataKey="active"
+                    name="Active"
+                    fill={C_PRIMARY}
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Bar
+                    dataKey="graduated"
+                    name="Graduated"
+                    fill={C_GREEN}
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Reintegration Outcomes */}
+          <div>
+            <SectionHeader
+              title="Reintegration Outcomes"
+              subtitle={`${totalReintegrated} cases completed the reintegration process`}
+            />
+            <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
+              <ResponsiveContainer width="100%" height={240}>
+                <PieChart>
+                  <Pie
+                    data={reintegrationOutcomes}
+                    dataKey="value"
+                    nameKey="label"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={90}
+                    labelLine={false}
+                    label={PieLabel as any}
+                  >
+                    {reintegrationOutcomes.map((_, i) => (
+                      <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(v, name) => [`${v} residents`, name]}
+                    contentStyle={TOOLTIP_STYLE}
+                  />
+                  <Legend
+                    iconType="circle"
+                    iconSize={8}
+                    formatter={(value) => value}
+                    wrapperStyle={{ fontFamily: "Inter", fontSize: 11 }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Services by Quarter + Case Category Distribution ──────────────── */}
+        <div className="grid lg:grid-cols-2 gap-6 mb-8">
+          {/* Services by Quarter */}
+          <div>
+            <SectionHeader
+              title="Services by Quarter"
+              subtitle="Caring, Healing, and Teaching service counts per quarter"
+            />
+            <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={servicesByQuarter} barCategoryGap="28%">
+                  <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
+                  <XAxis
+                    dataKey="quarter"
+                    tick={TICK_STYLE}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={TICK_STYLE}
+                    axisLine={false}
+                    tickLine={false}
+                    allowDecimals={false}
+                  />
+                  <Tooltip contentStyle={TOOLTIP_STYLE} />
+                  <Legend
+                    iconType="circle"
+                    iconSize={8}
+                    wrapperStyle={{ fontFamily: "Inter", fontSize: 12 }}
+                  />
+                  <Bar
+                    dataKey="caring"
+                    name="Caring"
+                    fill={C_YELLOW}
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Bar
+                    dataKey="healing"
+                    name="Healing"
+                    fill={C_PURPLE}
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Bar
+                    dataKey="teaching"
+                    name="Teaching"
+                    fill={C_BLUE}
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Case Category Distribution */}
+          <div>
+            <SectionHeader
+              title="Beneficiaries by Case Category"
+              subtitle="Distribution of admitted residents by case type"
+            />
+            <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart
+                  data={caseCategories}
+                  layout="vertical"
+                  margin={{ left: 8, right: 24 }}
+                  barCategoryGap="20%"
+                >
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke={GRID_COLOR}
+                    horizontal={false}
+                  />
+                  <XAxis
+                    type="number"
+                    tick={TICK_STYLE}
+                    axisLine={false}
+                    tickLine={false}
+                    allowDecimals={false}
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="category"
+                    tick={{ ...TICK_STYLE, fontSize: 10 }}
+                    axisLine={false}
+                    tickLine={false}
+                    width={120}
+                  />
+                  <Tooltip contentStyle={TOOLTIP_STYLE} />
+                  <Bar
+                    dataKey="count"
+                    name="Residents"
+                    fill={C_PINK}
+                    radius={[0, 4, 4, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Resident Outcome Indicators ──────────────────────────────────── */}
+        <div className="mb-8">
+          <SectionHeader
+            title="Resident Outcome Indicators"
+            subtitle="Average improvement rates across key program outcomes for graduates"
+          />
+          <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
+            <div className="space-y-5 max-w-2xl">
+              {outcomeIndicators.map((o) => (
+                <div key={o.label}>
+                  <div className="flex justify-between items-baseline mb-1.5">
+                    <span className="font-body text-sm font-medium text-foreground">
+                      {o.label}
+                    </span>
+                    <span className="font-heading text-sm font-bold text-foreground">
+                      {o.pct}%
+                    </span>
+                  </div>
+                  <div className="relative h-2.5 w-full bg-muted rounded-full overflow-hidden">
+                    <div
+                      className="absolute left-0 top-0 h-full rounded-full transition-all"
+                      style={{
+                        width: `${o.pct}%`,
+                        background:
+                          o.pct >= 75
+                            ? C_PRIMARY
+                            : o.pct >= 60
+                              ? C_YELLOW
+                              : C_PURPLE,
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="font-body text-xs text-muted-foreground mt-5">
+              Indicators measured at case closure through standardized welfare
+              assessment forms. Target threshold: 70%.
+            </p>
+          </div>
+        </div>
+
+        {/* ── ML Predictions ───────────────────────────────────────────────── */}
+        <div className="mb-8">
+          <SectionHeader
+            title="ML Predictions"
+            subtitle="Sample profiles shown — connect donor & resident DB endpoints to score everyone"
+          />
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+
+            {/* Donor Retention Score */}
+            <div className="bg-card rounded-2xl border border-border shadow-sm p-5 flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Donor Retention
+                </span>
+                <span className="font-body text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                  Sample
+                </span>
+              </div>
+              {retentionLoading ? (
+                <div className="h-10 bg-muted animate-pulse rounded-lg" />
+              ) : mlRetention ? (
+                <>
+                  <div
+                    className="font-heading text-3xl font-bold"
+                    style={{
+                      color:
+                        mlRetention.probability_retained >= 0.7
+                          ? C_GREEN
+                          : mlRetention.probability_retained >= 0.4
+                          ? C_YELLOW
+                          : "hsl(0,72%,51%)",
+                    }}
+                  >
+                    {Math.round(mlRetention.probability_retained * 100)}%
+                  </div>
+                  <div className="font-body text-xs text-muted-foreground">
+                    Likelihood of giving again · connect DB to score all donors
+                  </div>
+                </>
+              ) : (
+                <div className="font-body text-xs text-muted-foreground">ML service offline</div>
+              )}
+            </div>
+
+            {/* Predicted Contribution */}
+            <div className="bg-card rounded-2xl border border-border shadow-sm p-5 flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Predicted Giving
+                </span>
+                <span className="font-body text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                  Sample
+                </span>
+              </div>
+              {growthLoading ? (
+                <div className="h-10 bg-muted animate-pulse rounded-lg" />
+              ) : mlGrowth ? (
+                <>
+                  <div className="font-heading text-3xl font-bold text-foreground">
+                    {formatPHP(mlGrowth.predicted_total_monetary_value)}
+                  </div>
+                  <div className="font-body text-xs text-muted-foreground">
+                    Est. lifetime giving · connect DB to rank all donors by value
+                  </div>
+                </>
+              ) : (
+                <div className="font-body text-xs text-muted-foreground">ML service offline</div>
+              )}
+            </div>
+
+            {/* Resident Education Progress */}
+            <div className="bg-card rounded-2xl border border-border shadow-sm p-5 flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Edu. Progress
+                </span>
+                <span className="font-body text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                  Sample
+                </span>
+              </div>
+              {progressLoading ? (
+                <div className="h-10 bg-muted animate-pulse rounded-lg" />
+              ) : mlGirlsProgress ? (
+                <>
+                  <div className="font-heading text-3xl font-bold text-foreground">
+                    {Math.round(mlGirlsProgress.predicted_mean_progress)}
+                    <span className="font-body text-base font-normal text-muted-foreground">/100</span>
+                  </div>
+                  <div className="font-body text-xs text-muted-foreground">
+                    Expected academic score · connect DB to flag residents needing support
+                  </div>
+                </>
+              ) : (
+                <div className="font-body text-xs text-muted-foreground">ML service offline</div>
+              )}
+            </div>
+
+            {/* At-Risk Trajectory */}
+            <div className="bg-card rounded-2xl border border-border shadow-sm p-5 flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Risk Trajectory
+                </span>
+                <span className="font-body text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                  Sample
+                </span>
+              </div>
+              {trajectoryLoading ? (
+                <div className="h-10 bg-muted animate-pulse rounded-lg" />
+              ) : mlTrajectory ? (
+                <>
+                  <div
+                    className="font-heading text-2xl font-bold"
+                    style={{
+                      color:
+                        mlTrajectory.risk_label === "At Risk"
+                          ? "hsl(0,72%,51%)"
+                          : C_GREEN,
+                    }}
+                  >
+                    {mlTrajectory.risk_label ?? "On Track"}
+                  </div>
+                  <div className="font-body text-xs text-muted-foreground">
+                    Education trend · connect DB to surface all at-risk residents
+                  </div>
+                </>
+              ) : (
+                <div className="font-body text-xs text-muted-foreground">ML service offline</div>
+              )}
+            </div>
+
+            {/* Social Engagement Rate */}
+            <div className="bg-card rounded-2xl border border-border shadow-sm p-5 flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Social Engagement
+                </span>
+                <span className="font-body text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                  Sample
+                </span>
+              </div>
+              {socialEngagementLoading ? (
+                <div className="h-10 bg-muted animate-pulse rounded-lg" />
+              ) : mlSocialEngagement ? (
+                <>
+                  <div className="font-heading text-3xl font-bold text-foreground">
+                    {(mlSocialEngagement.predicted_engagement_rate * 100).toFixed(1)}
+                    <span className="font-body text-base font-normal text-muted-foreground">%</span>
+                  </div>
+                  <div className="font-body text-xs text-muted-foreground">
+                    Predicted post engagement · connect DB to optimize all posts
+                  </div>
+                </>
+              ) : (
+                <div className="font-body text-xs text-muted-foreground">ML service offline</div>
+              )}
+            </div>
+
+            {/* Social Causal Boost */}
+            <div className="bg-card rounded-2xl border border-border shadow-sm p-5 flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Boost Impact
+                </span>
+                <span className="font-body text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                  Sample
+                </span>
+              </div>
+              {socialCausalLoading ? (
+                <div className="h-10 bg-muted animate-pulse rounded-lg" />
+              ) : mlSocialCausal ? (
+                <>
+                  <div
+                    className="font-heading text-3xl font-bold"
+                    style={{ color: mlSocialCausal.estimated_ite > 0 ? C_GREEN : "hsl(0,72%,51%)" }}
+                  >
+                    {mlSocialCausal.estimated_ite > 0 ? "+" : ""}
+                    {(mlSocialCausal.estimated_ite * 100).toFixed(1)}
+                    <span className="font-body text-base font-normal text-muted-foreground">%</span>
+                  </div>
+                  <div className="font-body text-xs text-muted-foreground">
+                    Est. gift-referral lift from boosting · connect DB to rank posts worth boosting
+                  </div>
+                </>
+              ) : (
+                <div className="font-body text-xs text-muted-foreground">ML service offline</div>
+              )}
+            </div>
+
+          </div>
+        </div>
+
+        <div className="bg-muted/50 rounded-2xl border border-border p-5 flex items-start gap-3">
+          <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-body text-sm font-medium text-foreground mb-0.5">
+              Live Data Source
+            </p>
+            <p className="font-body text-xs text-muted-foreground leading-relaxed">
+              Charts are loaded from
+              <code className="font-mono bg-muted px-1 rounded mx-1">
+                /api/admin-data/reports-summary?year=
+              </code>
+              and update when you change the selected year.
+            </p>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
 }
