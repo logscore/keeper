@@ -102,12 +102,15 @@ builder.Services.AddRateLimiter(options =>
             limiterOptions.QueueLimit = 0;
         }
     );
-    options.AddFixedWindowLimiter("public-donations", limiterOptions =>
-    {
-        limiterOptions.PermitLimit = 30;
-        limiterOptions.Window = TimeSpan.FromMinutes(1);
-        limiterOptions.QueueLimit = 0;
-    });
+    options.AddFixedWindowLimiter(
+        "public-donations",
+        limiterOptions =>
+        {
+            limiterOptions.PermitLimit = 30;
+            limiterOptions.Window = TimeSpan.FromMinutes(1);
+            limiterOptions.QueueLimit = 0;
+        }
+    );
 });
 
 builder.Services.AddControllers();

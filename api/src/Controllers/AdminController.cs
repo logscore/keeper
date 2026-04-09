@@ -199,8 +199,7 @@ public class AdminController : ControllerBase
                 )
                 .ToListAsync(cancellationToken);
 
-            var dtos = rows
-                .Select(r => new AdminSafehouseDto
+            var dtos = rows.Select(r => new AdminSafehouseDto
                 {
                     Id = r.Id,
                     Name = r.Name,
