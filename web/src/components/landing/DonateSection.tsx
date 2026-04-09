@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { apiPostJson, getApiBaseUrl } from "@/lib/api";
 import { Heart } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
@@ -21,6 +22,8 @@ export default function DonateSection() {
   const [customAmount, setCustomAmount] = useState("");
   const [customTouched, setCustomTouched] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const parsedCustom = parseFloat(customAmount);
   const resolvedAmount =
@@ -35,16 +38,32 @@ export default function DonateSection() {
       if (!customValid) return;
     }
     if (!resolvedAmount || resolvedAmount <= 0) return;
+    setSubmitError(null);
     setShowConfirm(true);
   }
 
-  function confirmDonate() {
-    setShowConfirm(false);
+  async function confirmDonate() {
     if (!resolvedAmount || resolvedAmount <= 0) return;
-    navigate({
-      to: "/donate-thank-you",
-      search: { amount: resolvedAmount },
-    });
+    if (!getApiBaseUrl()) {
+      setSubmitError("Donations are temporarily unavailable (API not configured).");
+      return;
+    }
+    setSubmitError(null);
+    setSubmitting(true);
+    try {
+      await apiPostJson<{ donationId: number }>("/api/public/donations", {
+        amount: resolvedAmount,
+      });
+      setShowConfirm(false);
+      navigate({
+        to: "/donate-thank-you",
+        search: { amount: resolvedAmount },
+      });
+    } catch (e) {
+      setSubmitError(e instanceof Error ? e.message : "Could not complete donation.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -177,20 +196,30 @@ export default function DonateSection() {
                 </span>
                 . Would you like to proceed?
               </p>
+              {submitError && (
+                <p className="font-body text-xs text-red-500 mt-3 text-left">
+                  {submitError}
+                </p>
+              )}
               <div className="mt-6 flex gap-3">
                 <Button
                   variant="outline"
                   className="flex-1 font-body rounded-xl h-11"
-                  onClick={() => setShowConfirm(false)}
+                  disabled={submitting}
+                  onClick={() => {
+                    setSubmitError(null);
+                    setShowConfirm(false);
+                  }}
                 >
                   Cancel
                 </Button>
                 <Button
                   className="flex-1 font-body gap-2 bg-yellow-500 hover:bg-yellow-600 text-black rounded-xl h-11"
-                  onClick={confirmDonate}
+                  disabled={submitting}
+                  onClick={() => void confirmDonate()}
                 >
                   <Heart className="h-4 w-4" />
-                  Donate
+                  {submitting ? "Saving…" : "Donate"}
                 </Button>
               </div>
             </motion.div>
