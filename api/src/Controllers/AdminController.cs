@@ -1,9 +1,11 @@
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using api.Data;
 using api.DTOs;
 using api.Security;
+using api.Services.Ml;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -17,11 +19,20 @@ public class AdminController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly ILogger<AdminController> _logger;
+    private readonly MlClientService _ml;
 
-    public AdminController(AppDbContext db, ILogger<AdminController> logger)
+    // Snake_case serializer options for building ML service request payloads.
+    private static readonly JsonSerializerOptions MlJsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+    };
+
+    public AdminController(AppDbContext db, ILogger<AdminController> logger, MlClientService ml)
     {
         _db = db;
         _logger = logger;
+        _ml = ml;
     }
 
     /// <summary>Residents for dashboard metrics and case lists (maps <c>dbo.residents</c>).</summary>
@@ -385,7 +396,12 @@ public class AdminController : ControllerBase
     )
     {
         take = Math.Clamp(take, 1, 20_000);
+        return Ok(await FetchDonorMlFeaturesAsync(take, cancellationToken));
+    }
 
+    private async Task<List<AdminDonorMlFeaturesDto>> FetchDonorMlFeaturesAsync(
+        int take, CancellationToken ct)
+    {
         var supporters = await _db
             .Supporters.AsNoTracking()
             .OrderBy(s => s.SupporterId)
@@ -405,12 +421,10 @@ public class AdminController : ControllerBase
                 s.AcquisitionChannel,
                 s.Status,
             })
-            .ToListAsync(cancellationToken);
+            .ToListAsync(ct);
 
         if (supporters.Count == 0)
-        {
-            return Ok(Array.Empty<AdminDonorMlFeaturesDto>());
-        }
+            return [];
 
         var supporterIds = supporters.Select(s => s.SupporterId).ToArray();
 
@@ -428,31 +442,35 @@ public class AdminController : ControllerBase
                 LastDonationDate = g.Max(x => (DateOnly?)x.DonationDate),
                 FirstDonationDate = g.Min(x => (DateOnly?)x.DonationDate),
             })
-            .ToDictionaryAsync(x => x.SupporterId, cancellationToken);
+            .ToDictionaryAsync(x => x.SupporterId, ct);
 
         var topProgramRows = await (
             from d in _db.Donations.AsNoTracking()
             join a in _db.DonationAllocations.AsNoTracking() on d.DonationId equals a.DonationId
             where d.SupporterId.HasValue && supporterIds.Contains(d.SupporterId.Value)
             where a.ProgramArea != null && a.ProgramArea != ""
-            group a by new { SupporterId = d.SupporterId!.Value, ProgramArea = a.ProgramArea! } into g
+            group a by new
+            {
+                SupporterId = d.SupporterId!.Value,
+                ProgramArea = a.ProgramArea!,
+            } into g
             select new
             {
                 g.Key.SupporterId,
                 g.Key.ProgramArea,
                 Count = g.Count(),
             }
-        ).ToListAsync(cancellationToken);
+        ).ToListAsync(ct);
 
         var topProgramBySupporter = topProgramRows
             .GroupBy(x => x.SupporterId)
             .ToDictionary(
                 g => g.Key,
-                g => g
-                    .OrderByDescending(x => x.Count)
-                    .ThenBy(x => x.ProgramArea)
-                    .Select(x => x.ProgramArea)
-                    .FirstOrDefault()
+                g =>
+                    g.OrderByDescending(x => x.Count)
+                        .ThenBy(x => x.ProgramArea)
+                        .Select(x => x.ProgramArea)
+                        .FirstOrDefault()
             );
 
         var utcToday = DateOnly.FromDateTime(DateTime.UtcNow);
@@ -469,9 +487,10 @@ public class AdminController : ControllerBase
             var donorTenureDays = anchorDate.HasValue
                 ? Math.Max(0, utcToday.DayNumber - anchorDate.Value.DayNumber)
                 : 0;
-            float? recencyDays = stats?.LastDonationDate.HasValue == true
-                ? Math.Max(0, utcToday.DayNumber - stats.LastDonationDate.Value.DayNumber)
-                : null;
+            float? recencyDays =
+                stats?.LastDonationDate.HasValue == true
+                    ? Math.Max(0, utcToday.DayNumber - stats.LastDonationDate.Value.DayNumber)
+                    : null;
 
             result.Add(
                 new AdminDonorMlFeaturesDto
@@ -500,20 +519,27 @@ public class AdminController : ControllerBase
             );
         }
 
-        return Ok(result);
+        return result;
     }
 
     /// <summary>
     /// Resident-level ML feature payloads used by girls-progress and girls-trajectory models.
     /// </summary>
     [HttpGet("ml/resident-features")]
-    public async Task<ActionResult<IReadOnlyList<AdminResidentMlFeaturesDto>>> GetResidentMlFeatures(
+    public async Task<
+        ActionResult<IReadOnlyList<AdminResidentMlFeaturesDto>>
+    > GetResidentMlFeatures(
         [FromQuery] int take = 5000,
         CancellationToken cancellationToken = default
     )
     {
         take = Math.Clamp(take, 1, 20_000);
+        return Ok(await FetchResidentMlFeaturesAsync(take, cancellationToken));
+    }
 
+    private async Task<List<AdminResidentMlFeaturesDto>> FetchResidentMlFeaturesAsync(
+        int take, CancellationToken ct)
+    {
         var rows = await _db
             .Database.SqlQuery<ResidentMlRow>(
                 $"""
@@ -723,8 +749,7 @@ public class AdminController : ControllerBase
             )
             .ToListAsync(cancellationToken);
 
-        var result = rows
-            .Select(r => new AdminResidentMlFeaturesDto
+        var result = rows.Select(r => new AdminResidentMlFeaturesDto
             {
                 ResidentId = r.ResidentId.ToString(CultureInfo.InvariantCulture),
                 ResidentCode = r.ResidentCode ?? string.Empty,
@@ -793,7 +818,177 @@ public class AdminController : ControllerBase
             })
             .ToList();
 
-        return Ok(result);
+        return result;
+    }
+
+    /// <summary>Aggregated ML predictions for the reports dashboard (single round-trip).</summary>
+    [HttpGet("ml/reports-aggregate")]
+    public async Task<ActionResult<ReportsMlAggregateDto>> GetMlReportsAggregate(CancellationToken ct)
+    {
+        const int maxRows = 2000;
+
+        var donorsTask = FetchDonorMlFeaturesAsync(maxRows, ct);
+        var residentsTask = FetchResidentMlFeaturesAsync(maxRows, ct);
+        await Task.WhenAll(donorsTask, residentsTask);
+
+        var donors = await donorsTask;
+        var residents = await residentsTask;
+
+        var agg = new ReportsMlAggregateDto
+        {
+            DonorTotal = donors.Count,
+            ResidentTotal = residents.Count,
+        };
+
+        if (donors.Count == 0 && residents.Count == 0)
+            return Ok(agg);
+
+        try
+        {
+            // ── Donor retention batch ─────────────────────────────────────────
+            Task<JsonElement>? retentionTask = null;
+            Task<JsonElement>? growthTask = null;
+            Task<JsonElement>? progressTask = null;
+            Task<JsonElement>? trajectoryTask = null;
+
+            if (donors.Count > 0)
+            {
+                var retentionBody = JsonSerializer.SerializeToElement(
+                    donors.Select(d => new
+                    {
+                        frequency = d.Frequency,
+                        avg_monetary_value = d.AvgMonetaryValue,
+                        social_referral_count = d.SocialReferralCount,
+                        is_recurring_donor = d.IsRecurringDonor,
+                        top_program_interest = d.TopProgramInterest,
+                    }).ToArray(),
+                    MlJsonOptions
+                );
+                var growthBody = JsonSerializer.SerializeToElement(
+                    donors.Select(d => new
+                    {
+                        recency_days = d.RecencyDays,
+                        frequency = d.Frequency,
+                        social_referral_count = d.SocialReferralCount,
+                        is_recurring_donor = d.IsRecurringDonor,
+                        donor_tenure_days = d.DonorTenureDays,
+                        top_program_interest = d.TopProgramInterest,
+                        supporter_type = d.SupporterType,
+                        relationship_type = d.RelationshipType,
+                        region = d.Region,
+                        acquisition_channel = d.AcquisitionChannel,
+                        status = d.Status,
+                    }).ToArray(),
+                    MlJsonOptions
+                );
+                retentionTask = _ml.BatchPredictAsync("retention", retentionBody, ct);
+                growthTask = _ml.BatchPredictAsync("growth", growthBody, ct);
+            }
+
+            if (residents.Count > 0)
+            {
+                // girls-progress uses [JsonPropertyName] attributes on the DTO
+                var progressBody = JsonSerializer.SerializeToElement(residents.ToArray());
+                var trajectoryBody = JsonSerializer.SerializeToElement(
+                    residents.Select(r => new
+                    {
+                        current_progress = r.CurrentProgress,
+                        days_since_admission = r.DaysSinceAdmission,
+                        present_age_years = r.PresentAgeYears,
+                        age_upon_admission_years = r.AgeUponAdmissionYears,
+                        has_special_needs = r.HasSpecialNeeds,
+                        family_parent_pwd = r.FamilyParentPwd,
+                        hw_mean_nutrition_score = r.HwMeanNutritionScore,
+                        hw_mean_energy_level_score = r.HwMeanEnergyLevelScore,
+                        hw_mean_sleep_quality_score = r.HwMeanSleepQualityScore,
+                        hw_mean_general_health_score = r.HwMeanGeneralHealthScore,
+                        hw_mean_bmi = r.HwMeanBmi,
+                        hw_rate_psychological_checkup_done = r.HwRatePsychologicalCheckupDone,
+                        n_incidents = r.NIncidents,
+                        incident_high_rate = r.IncidentHighRate,
+                        incident_unresolved_rate = r.IncidentUnresolvedRate,
+                        n_home_visitations = r.NHomeVisitations,
+                        safety_concern_rate = r.SafetyConcernRate,
+                        followup_needed_rate = r.FollowupNeededRate,
+                        n_process_sessions = r.NProcessSessions,
+                        concerns_flagged_rate = r.ConcernsFlaggedRate,
+                        referral_made_rate = r.ReferralMadeRate,
+                        n_intervention_plans = r.NInterventionPlans,
+                        occupancy_ratio = r.OccupancyRatio,
+                        case_status = r.CaseStatus,
+                        case_category = r.CaseCategory,
+                        initial_risk_level = r.InitialRiskLevel,
+                        current_risk_level = r.CurrentRiskLevel,
+                        referral_source = r.ReferralSource,
+                        reintegration_status = r.ReintegrationStatus,
+                        edu_education_level = r.EduEducationLevel,
+                        region = r.Region,
+                        province = r.Province,
+                    }).ToArray(),
+                    MlJsonOptions
+                );
+                progressTask = _ml.BatchPredictAsync("girls-progress", progressBody, ct);
+                trajectoryTask = _ml.BatchPredictAsync("girls-trajectory", trajectoryBody, ct);
+            }
+
+            await Task.WhenAll(
+                retentionTask ?? Task.CompletedTask,
+                growthTask ?? Task.CompletedTask,
+                progressTask ?? Task.CompletedTask,
+                trajectoryTask ?? Task.CompletedTask
+            );
+
+            // ── Aggregate donor predictions ───────────────────────────────────
+            if (retentionTask is not null)
+            {
+                var retentionResults = await retentionTask;
+                var lapseCount = retentionResults.EnumerateArray()
+                    .Count(p => p.GetProperty("predicted_class").GetInt32() == 0);
+                agg.DonorLapsePct = donors.Count > 0 ? (double)lapseCount / donors.Count * 100 : 0;
+            }
+
+            if (growthTask is not null)
+            {
+                var growthResults = await growthTask;
+                var totalGiving = growthResults.EnumerateArray()
+                    .Sum(p => p.GetProperty("predicted_total_monetary_value").GetDouble());
+                agg.DonorAvgPredictedGiving = donors.Count > 0 ? totalGiving / donors.Count : 0;
+            }
+
+            // ── Aggregate resident predictions ────────────────────────────────
+            if (progressTask is not null)
+            {
+                var progressResults = await progressTask;
+                var totalProgress = progressResults.EnumerateArray()
+                    .Sum(p => p.GetProperty("predicted_mean_progress").GetDouble());
+                agg.ResidentAvgProgress = residents.Count > 0 ? totalProgress / residents.Count : 0;
+            }
+
+            if (trajectoryTask is not null)
+            {
+                var trajectoryResults = await trajectoryTask;
+                agg.ResidentAtRiskCount = trajectoryResults.EnumerateArray()
+                    .Count(p =>
+                        p.TryGetProperty("risk_label", out var lbl)
+                        && lbl.ValueKind == JsonValueKind.String
+                        && lbl.GetString() == "At Risk");
+            }
+
+            agg.MlOffline = false;
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogWarning(ex, "ML service unreachable during reports aggregate.");
+            agg.MlOffline = true;
+        }
+        catch (MlServiceException ex)
+        {
+            _logger.LogWarning("ML service error {Status} during reports aggregate: {Body}",
+                ex.StatusCode, ex.ResponseBody);
+            agg.MlOffline = true;
+        }
+
+        return Ok(agg);
     }
 
     /// <summary>Full caseload rows for <c>/caseload</c> (read-only). Does not expose restricted notes.</summary>

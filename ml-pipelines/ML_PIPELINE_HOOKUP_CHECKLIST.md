@@ -5,12 +5,12 @@ This is the end-to-end list to fully hook up ML in `keeper`, based on the curren
 ## Current Status (already done)
 
 - ML FastAPI service exists in `ml-pipelines/app` with prediction routes for:
-  - `retention`
-  - `growth`
+  - `retention` (+ `/batch/predict`)
+  - `growth` (+ `/batch/predict`)
   - `social`
   - `social/causal`
-  - `girls-progress`
-  - `girls-trajectory`
+  - `girls-progress` (+ `/batch/predict`)
+  - `girls-trajectory` (+ `/batch/predict`)
 - Training scripts exist in `ml-pipelines/scripts`, including `train_social_causal.py`.
 - Nightly retrain workflow exists at `.github/workflows/nightly-retrain.yml`.
 - ASP.NET proxy endpoints exist in `api/src/Controllers/MlController.cs` for prediction and health.
@@ -18,21 +18,22 @@ This is the end-to-end list to fully hook up ML in `keeper`, based on the curren
 - Backend ML feature endpoints are implemented:
   - `GET /api/admin/ml/donor-features`
   - `GET /api/admin/ml/resident-features`
-- `/reports` is wired to real donor/resident ML aggregates in `web/src/routes/reports.tsx`.
+- Backend aggregate endpoint added: `GET /api/admin/ml/reports-aggregate` — fetches features, batch-predicts all 4 models server-side, returns summary stats in one response.
+- `/reports` wired to `GET /api/admin/ml/reports-aggregate` (single call, no N+1).
 - Resident ML endpoint type mismatch fix is applied (`double` mapping for SQL `float` values).
+- Deploy workflow (`main_keeper-intex-pipeline.yml`) now includes `scripts/` and `Dataset/` in package — retraining works in Azure.
 
 ## Progress Snapshot (reports-only scope)
 
 - Done:
   - Step 1 backend feature endpoints
   - `/reports` live ML aggregate wiring (donor + resident)
-  - `/reports` remains in scope; no donor/caseload page ML changes in active plan
-- In progress:
-  - local runtime verification end-to-end (`web` -> `api` -> `ml`)
+  - Aggregate endpoint replaces N+1 client-side ML calls (performance fix)
+  - Deployment package fixed (`scripts/` + `Dataset/` included)
 - Remaining for reports-only completion:
-  - verify `/api/admin/ml/resident-features` returns 200 after API restart
-  - validate all 4 report ML cards show live values
-  - optimize aggregation path (prefer backend aggregate endpoint over many client-side ML calls)
+  - verify `/api/admin/ml/reports-aggregate` returns 200 end-to-end (web -> api -> ml)
+  - validate all 4 report ML cards show live values with no "ML service offline" message
+  - local smoke test: Docker ML container + API + frontend
 
 ---
 

@@ -74,41 +74,14 @@ type ReportsSummary = {
   outcomeIndicators: { label: string; pct: number }[];
 };
 
-type DonorMlFeatures = {
-  supporter_id: string;
-  supporter_name: string;
-  frequency: number;
-  avg_monetary_value: number | null;
-  social_referral_count: number;
-  is_recurring_donor: number;
-  top_program_interest: string | null;
-  recency_days: number | null;
-  donor_tenure_days: number;
-  supporter_type: string | null;
-  relationship_type: string | null;
-  region: string | null;
-  acquisition_channel: string | null;
-  status: string | null;
-};
-
-type ResidentMlFeatures = {
-  resident_id: string;
-  current_progress: number | null;
-  days_since_admission: number | null;
-  present_age_years: number | null;
-  age_upon_admission_years: number | null;
-  has_special_needs: number | null;
-  hw_mean_general_health_score: number | null;
-  hw_mean_nutrition_score: number | null;
-  hw_mean_energy_level_score: number | null;
-  hw_mean_sleep_quality_score: number | null;
-  n_incidents: number | null;
-  n_home_visitations: number | null;
-  n_intervention_plans: number | null;
-  case_status: string | null;
-  case_category: string | null;
-  initial_risk_level: string | null;
-  current_risk_level: string | null;
+type ReportsMlAggregate = {
+  donor_lapse_pct: number;
+  donor_avg_predicted_giving: number;
+  donor_total: number;
+  resident_avg_progress: number;
+  resident_at_risk_count: number;
+  resident_total: number;
+  ml_offline: boolean;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -199,91 +172,15 @@ function ReportsPage() {
   }));
   const outcomeIndicators = reportsSummary?.outcomeIndicators ?? [];
 
-  // ── ML Predictions (real donor/resident features; social remains sample) ──────
+  // ── ML Predictions (single server-side aggregate; social remains sample) ──────
   const ML_HEADERS = { "Content-Type": "application/json" };
 
-  const { data: donorFeatures = [], isLoading: donorFeaturesLoading } = useQuery({
-    queryKey: ["admin", "ml", "donor-features"],
-    queryFn: () =>
-      apiGetJson<DonorMlFeatures[]>("/api/admin/ml/donor-features?take=1000"),
-    staleTime: 60_000,
-    retry: false,
-  });
-
-  const { data: residentFeatures = [], isLoading: residentFeaturesLoading } = useQuery({
-    queryKey: ["admin", "ml", "resident-features"],
-    queryFn: () =>
-      apiGetJson<ResidentMlFeatures[]>("/api/admin/ml/resident-features?take=1000"),
-    staleTime: 60_000,
-    retry: false,
-  });
-
   const {
-    data: donorMlAggregate,
-    isLoading: donorAggregateLoading,
+    data: mlAggregate,
+    isLoading: mlAggregateLoading,
   } = useQuery({
-    queryKey: ["ml", "aggregate", "donor", donorFeatures.length],
-    enabled: donorFeatures.length > 0,
-    queryFn: async () => {
-      const predictions = await Promise.all(
-        donorFeatures.map(async (features) => {
-          const [retention, growth] = await Promise.all([
-            apiGetJson<{ predicted_class: number }>(
-              "/api/ml/retention/predict",
-              {
-                method: "POST",
-                headers: ML_HEADERS,
-                body: JSON.stringify({
-                  frequency: features.frequency,
-                  avg_monetary_value: features.avg_monetary_value,
-                  social_referral_count: features.social_referral_count,
-                  is_recurring_donor: features.is_recurring_donor,
-                  top_program_interest: features.top_program_interest,
-                }),
-              }
-            ),
-            apiGetJson<{ predicted_total_monetary_value: number }>(
-              "/api/ml/growth/predict",
-              {
-                method: "POST",
-                headers: ML_HEADERS,
-                body: JSON.stringify({
-                  recency_days: features.recency_days,
-                  frequency: features.frequency,
-                  social_referral_count: features.social_referral_count,
-                  is_recurring_donor: features.is_recurring_donor,
-                  donor_tenure_days: features.donor_tenure_days,
-                  top_program_interest: features.top_program_interest,
-                  supporter_type: features.supporter_type,
-                  relationship_type: features.relationship_type,
-                  region: features.region,
-                  acquisition_channel: features.acquisition_channel,
-                  status: features.status,
-                }),
-              }
-            ),
-          ]);
-
-          return {
-            isLapsed: retention.predicted_class === 0,
-            predictedGiving: growth.predicted_total_monetary_value ?? 0,
-          };
-        })
-      );
-
-      const total = predictions.length;
-      const lapseCount = predictions.filter((p) => p.isLapsed).length;
-      const avgPredictedGiving =
-        total > 0
-          ? predictions.reduce((sum, p) => sum + p.predictedGiving, 0) / total
-          : 0;
-
-      return {
-        total,
-        lapsePct: total > 0 ? (lapseCount / total) * 100 : 0,
-        avgPredictedGiving,
-      };
-    },
+    queryKey: ["admin", "ml", "reports-aggregate"],
+    queryFn: () => apiGetJson<ReportsMlAggregate>("/api/admin/ml/reports-aggregate"),
     staleTime: 60_000,
     retry: false,
   });
@@ -347,79 +244,10 @@ function ReportsPage() {
     retry: false,
   });
 
-  const {
-    data: residentMlAggregate,
-    isLoading: residentAggregateLoading,
-  } = useQuery({
-    queryKey: ["ml", "aggregate", "resident", residentFeatures.length],
-    enabled: residentFeatures.length > 0,
-    queryFn: async () => {
-      const predictions = await Promise.all(
-        residentFeatures.map(async (features) => {
-          const [progress, trajectory] = await Promise.all([
-            apiGetJson<{ predicted_mean_progress: number }>(
-              "/api/ml/girls-progress/predict",
-              {
-                method: "POST",
-                headers: ML_HEADERS,
-                body: JSON.stringify(features),
-              }
-            ),
-            apiGetJson<{ risk_label: string | null }>(
-              "/api/ml/girls-trajectory/predict",
-              {
-                method: "POST",
-                headers: ML_HEADERS,
-                body: JSON.stringify({
-                  current_progress: features.current_progress,
-                  days_since_admission: features.days_since_admission,
-                  present_age_years: features.present_age_years,
-                  age_upon_admission_years: features.age_upon_admission_years,
-                  has_special_needs: features.has_special_needs,
-                  hw_mean_general_health_score: features.hw_mean_general_health_score,
-                  hw_mean_nutrition_score: features.hw_mean_nutrition_score,
-                  hw_mean_energy_level_score: features.hw_mean_energy_level_score,
-                  hw_mean_sleep_quality_score: features.hw_mean_sleep_quality_score,
-                  n_incidents: features.n_incidents,
-                  n_home_visitations: features.n_home_visitations,
-                  n_intervention_plans: features.n_intervention_plans,
-                  case_status: features.case_status,
-                  case_category: features.case_category,
-                  initial_risk_level: features.initial_risk_level,
-                  current_risk_level: features.current_risk_level,
-                }),
-              }
-            ),
-          ]);
-
-          return {
-            predictedProgress: progress.predicted_mean_progress ?? 0,
-            isAtRisk: trajectory.risk_label === "At Risk",
-          };
-        })
-      );
-
-      const total = predictions.length;
-      const avgProgress =
-        total > 0
-          ? predictions.reduce((sum, p) => sum + p.predictedProgress, 0) / total
-          : 0;
-      const atRiskCount = predictions.filter((p) => p.isAtRisk).length;
-
-      return {
-        total,
-        avgProgress,
-        atRiskCount,
-      };
-    },
-    staleTime: 60_000,
-    retry: false,
-  });
-
-  const retentionLoading = donorFeaturesLoading || donorAggregateLoading;
-  const growthLoading = donorFeaturesLoading || donorAggregateLoading;
-  const progressLoading = residentFeaturesLoading || residentAggregateLoading;
-  const trajectoryLoading = residentFeaturesLoading || residentAggregateLoading;
+  const retentionLoading = mlAggregateLoading;
+  const growthLoading = mlAggregateLoading;
+  const progressLoading = mlAggregateLoading;
+  const trajectoryLoading = mlAggregateLoading;
 
   const totalDonations = donationTrend.reduce((s, d) => s + d.amount, 0);
   const totalResidents = safehousePerformance.reduce(
@@ -893,25 +721,25 @@ function ReportsPage() {
                   Live
                 </span>
               </div>
-              {retentionLoading || donorFeatures.length === 0 ? (
+              {retentionLoading ? (
                 <div className="h-10 bg-muted animate-pulse rounded-lg" />
-              ) : donorMlAggregate ? (
+              ) : mlAggregate && !mlAggregate.ml_offline ? (
                 <>
                   <div
                     className="font-heading text-3xl font-bold"
                     style={{
                       color:
-                        donorMlAggregate.lapsePct < 25
+                        mlAggregate.donor_lapse_pct < 25
                           ? C_GREEN
-                          : donorMlAggregate.lapsePct < 40
+                          : mlAggregate.donor_lapse_pct < 40
                           ? C_YELLOW
                           : "hsl(0,72%,51%)",
                     }}
                   >
-                    {Math.round(donorMlAggregate.lapsePct)}%
+                    {Math.round(mlAggregate.donor_lapse_pct)}%
                   </div>
                   <div className="font-body text-xs text-muted-foreground">
-                    Donors predicted to lapse
+                    Donors predicted to lapse · {mlAggregate.donor_total} scored
                   </div>
                 </>
               ) : (
@@ -929,12 +757,12 @@ function ReportsPage() {
                   Live
                 </span>
               </div>
-              {growthLoading || donorFeatures.length === 0 ? (
+              {growthLoading ? (
                 <div className="h-10 bg-muted animate-pulse rounded-lg" />
-              ) : donorMlAggregate ? (
+              ) : mlAggregate && !mlAggregate.ml_offline ? (
                 <>
                   <div className="font-heading text-3xl font-bold text-foreground">
-                    {formatPHP(Math.round(donorMlAggregate.avgPredictedGiving))}
+                    {formatPHP(Math.round(mlAggregate.donor_avg_predicted_giving))}
                   </div>
                   <div className="font-body text-xs text-muted-foreground">
                     Average predicted lifetime giving
@@ -955,16 +783,16 @@ function ReportsPage() {
                   Live
                 </span>
               </div>
-              {progressLoading || residentFeatures.length === 0 ? (
+              {progressLoading ? (
                 <div className="h-10 bg-muted animate-pulse rounded-lg" />
-              ) : residentMlAggregate ? (
+              ) : mlAggregate && !mlAggregate.ml_offline ? (
                 <>
                   <div className="font-heading text-3xl font-bold text-foreground">
-                    {Math.round(residentMlAggregate.avgProgress)}
+                    {Math.round(mlAggregate.resident_avg_progress)}
                     <span className="font-body text-base font-normal text-muted-foreground">/100</span>
                   </div>
                   <div className="font-body text-xs text-muted-foreground">
-                    Average predicted resident progress
+                    Average predicted resident progress · {mlAggregate.resident_total} scored
                   </div>
                 </>
               ) : (
@@ -982,20 +810,20 @@ function ReportsPage() {
                   Live
                 </span>
               </div>
-              {trajectoryLoading || residentFeatures.length === 0 ? (
+              {trajectoryLoading ? (
                 <div className="h-10 bg-muted animate-pulse rounded-lg" />
-              ) : residentMlAggregate ? (
+              ) : mlAggregate && !mlAggregate.ml_offline ? (
                 <>
                   <div
                     className="font-heading text-2xl font-bold"
                     style={{
                       color:
-                        residentMlAggregate.atRiskCount > 0
+                        mlAggregate.resident_at_risk_count > 0
                           ? "hsl(0,72%,51%)"
                           : C_GREEN,
                     }}
                   >
-                    {residentMlAggregate.atRiskCount}
+                    {mlAggregate.resident_at_risk_count}
                   </div>
                   <div className="font-body text-xs text-muted-foreground">
                     Residents flagged At Risk
