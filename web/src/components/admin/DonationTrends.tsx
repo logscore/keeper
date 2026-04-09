@@ -74,11 +74,11 @@ export default function DonationTrends({ donations }: { donations: Donation[] })
 						axisLine={false}
 						tickLine={false}
 						tickFormatter={(v) =>
-							`$${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`
+							`₱${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`
 						}
 					/>
 					<Tooltip
-						formatter={(val) => [`$${Number(val).toLocaleString()}`, "Amount"]}
+						formatter={(val) => [`₱${Number(val).toLocaleString()}`, "Amount"]}
 						contentStyle={{
 							borderRadius: "12px",
 							border: "1px solid hsl(40,15%,88%)",

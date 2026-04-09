@@ -1,14 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import type { Activity } from "@/components/admin/ActivityFeed";
-import ActivityFeed from "@/components/admin/ActivityFeed";
 import type { Donation, Resident, Safehouse } from "@/components/admin/AdminMetrics";
 import AdminMetrics from "@/components/admin/AdminMetrics";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import CasesTable from "@/components/admin/CasesTable";
 import DonationTrends from "@/components/admin/DonationTrends";
 import OccupancyList from "@/components/admin/OccupancyList";
-import QuickActions from "@/components/admin/QuickActions";
 import { apiGetJson, type AuthMeResponse } from "@/lib/api";
 import { requireRole } from "@/lib/auth";
 
@@ -77,7 +74,7 @@ function AdminDashboard() {
 	return (
 		<div className="min-h-screen bg-background font-body">
 			<AdminSidebar user={user ?? null} />
-			<main className="ml-64 p-8">
+			<main className="md:ml-64 p-4 md:p-8 pt-16 md:pt-8">
 				<div className="mb-8">
 					<h1 className="font-heading text-3xl font-bold text-foreground">
 						Dashboard
@@ -105,10 +102,10 @@ function AdminDashboard() {
 				<div className="grid lg:grid-cols-3 gap-6 mt-6">
 					<div className="lg:col-span-2">
 						<CasesTable residents={residents} />
+						<DonationTrends donations={donations} />
 					</div>
-					<div className="space-y-6">
-						<QuickActions />
-						<ActivityFeed activities={activities} />
+					<div className="flex flex-col h-full">
+						<OccupancyList safehouses={safehouses} />
 					</div>
 				</div>
 			</main>
