@@ -1,29 +1,15 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getApiBaseUrl, type AuthMeResponse, logout } from "../../lib/api";
-
-async function fetchCurrentUser(): Promise<AuthMeResponse | null> {
-  const apiBaseUrl = getApiBaseUrl();
-  if (!apiBaseUrl) return null;
-  const res = await fetch(`${apiBaseUrl}/api/auth/me`, {
-    credentials: "include",
-  });
-  if (!res.ok) return null;
-  return res.json() as Promise<AuthMeResponse>;
-}
+import { logout } from "../../lib/api";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function Navbar() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const { data: user } = useQuery({
-    queryKey: ["auth", "me"],
-    queryFn: fetchCurrentUser,
-    retry: false,
-    staleTime: 60_000,
-  });
+  const { user, isStaffOrAdmin } = useAuth();
 
   const { mutate: signOut } = useMutation({
     mutationFn: logout,
@@ -69,7 +55,7 @@ export default function Navbar() {
             >
               Dashboard
             </Link>
-            {user?.roles.some((r) => r === "Admin" || r === "Staff") && (
+            {isStaffOrAdmin && (
               <Link
                 to="/admin"
                 className="font-body text-sm font-medium text-muted-foreground transition-colors hover:text-yellow-600 [&.active]:font-semibold [&.active]:text-yellow-600"
