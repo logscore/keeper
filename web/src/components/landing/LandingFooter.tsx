@@ -34,43 +34,46 @@ export default function LandingFooter() {
             </div>
           </div>
 
-          <div>
-            <h4 className="font-body text-sm font-semibold text-white mb-4 uppercase tracking-wider">
-              Legal
-            </h4>
-            <div className="space-y-3">
-              <Link
-                to="/privacy-policy"
-                className="block text-sm hover:text-white transition-colors"
-              >
-                Privacy Policy
-              </Link>
-              <a
-                href="#"
-                className="block text-sm hover:text-white transition-colors"
-              >
-                Cookie Consent
-              </a>
-            </div>
-          </div>
-        </div>
+					<div>
+						<h4 className="font-body text-sm font-semibold text-white mb-4 uppercase tracking-wider">
+							Legal
+						</h4>
+						<div className="space-y-3">
+							<Link
+								to="/privacy-policy"
+								className="block text-sm hover:text-white transition-colors"
+							>
+								Privacy Policy
+							</Link>
+							<button
+								type="button"
+								className="block text-sm hover:text-white transition-colors"
+							>
+								Cookie Consent
+							</button>
+						</div>
+					</div>
+				</div>
 
-        <div className="border-t border-white/10 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="font-body text-xs text-white/40">
-            © {new Date().getFullYear()} Keeper. All rights reserved. 501(c)(3)
-            Tax-Exempt Organization.
-          </p>
-          <div className="flex items-center gap-4">
-            <button className="font-body text-xs text-white/40 hover:text-white/60 transition-colors">
-              Cookie Preferences
-            </button>
-            <span className="text-white/20">|</span>
-            <span className="font-body text-xs text-white/40">
-              EIN: 12-3456789
-            </span>
-          </div>
-        </div>
-      </div>
-    </footer>
-  );
+				<div className="border-t border-white/10 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+					<p className="font-body text-xs text-white/40">
+						© {new Date().getFullYear()} Keeper. All rights reserved. 501(c)(3)
+						Tax-Exempt Organization.
+					</p>
+					<div className="flex items-center gap-4">
+						<button
+							type="button"
+							className="font-body text-xs text-white/40 hover:text-white/60 transition-colors"
+						>
+							Cookie Preferences
+						</button>
+						<span className="text-white/20">|</span>
+						<span className="font-body text-xs text-white/40">
+							EIN: 12-3456789
+						</span>
+					</div>
+				</div>
+			</div>
+		</footer>
+	);
 }

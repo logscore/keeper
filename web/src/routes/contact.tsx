@@ -3,6 +3,7 @@ import { Mail, Phone, MapPin } from "lucide-react";
 import { motion } from "framer-motion";
 import Navbar from "@/components/landing/Navbar";
 import LandingFooter from "@/components/landing/LandingFooter";
+import Navbar from "@/components/landing/Navbar";
 
 export const Route = createFileRoute("/contact")({
   component: ContactPage,
