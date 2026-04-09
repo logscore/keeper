@@ -7,6 +7,7 @@ import OccupancyList from "@/components/admin/OccupancyList";
 import CasesTable from "@/components/admin/CasesTable";
 import ActivityFeed from "@/components/admin/ActivityFeed";
 import QuickActions from "@/components/admin/QuickActions";
+import { apiGetJson, type AuthMeResponse } from "@/lib/api";
 import type { Resident, Donation, Safehouse } from "@/components/admin/AdminMetrics";
 import type { Activity } from "@/components/admin/ActivityFeed";
 
@@ -18,51 +19,32 @@ function AdminDashboard() {
   const { data: user } = useQuery({
     queryKey: ["auth", "me"],
     queryFn: async () => {
-      // TODO: Call your C# auth endpoint
-      // const res = await fetch(`${API_BASE}/auth/me`);
-      // return res.json();
-      return { full_name: "Admin User", email: "admin@keeper.org" };
-    },
+      const me = await apiGetJson<AuthMeResponse>("/api/auth/me");
+      return {
+        email: me.email,
+        full_name: me.email?.split("@")[0] ?? "Admin",
+      };
+    }
   });
 
   const { data: residents = [], isLoading: residentsLoading } = useQuery<Resident[]>({
     queryKey: ["residents"],
-    queryFn: async () => {
-      // TODO: Call your C# API endpoint
-      // const res = await fetch(`${API_BASE}/residents`);
-      // return res.json();
-      return [];
-    },
+    queryFn: () => apiGetJson<Resident[]>("/api/admin-data/residents"),
   });
 
   const { data: donations = [], isLoading: donationsLoading } = useQuery<Donation[]>({
     queryKey: ["donations"],
-    queryFn: async () => {
-      // TODO: Call your C# API endpoint
-      // const res = await fetch(`${API_BASE}/donations`);
-      // return res.json();
-      return [];
-    },
+    queryFn: () => apiGetJson<Donation[]>("/api/admin-data/donations"),
   });
 
   const { data: safehouses = [], isLoading: safehousesLoading } = useQuery<Safehouse[]>({
     queryKey: ["safehouses"],
-    queryFn: async () => {
-      // TODO: Call your C# API endpoint
-      // const res = await fetch(`${API_BASE}/safehouses`);
-      // return res.json();
-      return [];
-    },
+    queryFn: () => apiGetJson<Safehouse[]>("/api/admin-data/safehouses"),
   });
 
   const { data: activities = [], isLoading: activitiesLoading } = useQuery<Activity[]>({
     queryKey: ["activities"],
-    queryFn: async () => {
-      // TODO: Call your C# API endpoint
-      // const res = await fetch(`${API_BASE}/activities`);
-      // return res.json();
-      return [];
-    },
+    queryFn: () => apiGetJson<Activity[]>("/api/admin-data/activities"),
   });
 
   const loading = residentsLoading || donationsLoading || safehousesLoading || activitiesLoading;

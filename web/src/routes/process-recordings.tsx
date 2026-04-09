@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import AdminSidebar from "@/components/admin/AdminSidebar";
+import { apiGetJson, getApiBaseUrl, type AuthMeResponse } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,6 +32,24 @@ interface ProcessRecording {
   followUpActions: string;
 }
 
+type ResidentApi = {
+  id: string;
+  full_name?: string;
+  resident_code?: string;
+};
+
+type ProcessRecordingApi = {
+  id: number;
+  resident_id: number;
+  session_date: string;
+  social_worker: string;
+  session_type: SessionType;
+  emotional_state: string;
+  narrative_summary: string;
+  interventions: string;
+  follow_up_actions: string;
+};
+
 const EMOTIONAL_STATES = [
   "Calm",
   "Hopeful",
@@ -55,107 +74,113 @@ const EMPTY_FORM = {
 };
 
 function ProcessRecordingsPage() {
+  const queryClient = useQueryClient();
   const [selectedResident, setSelectedResident] = useState<Resident | null>(
     null
   );
   const [residentSearch, setResidentSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState(EMPTY_FORM);
-  const [recordings, setRecordings] = useState<ProcessRecording[]>([
-    {
-      id: 1,
-      residentId: 1,
-      sessionDate: "2025-03-15",
-      socialWorker: "Maria Santos",
-      sessionType: "individual",
-      emotionalState: "Anxious",
-      narrativeSummary:
-        "Client expressed difficulty sleeping and recurring nightmares. Discussed grounding techniques and reviewed safety plan. Client showed willingness to engage in coping strategies.",
-      interventions:
-        "Trauma-informed grounding exercise (5-4-3-2-1 technique). Safety plan review. Psychoeducation on trauma responses.",
-      followUpActions:
-        "Schedule follow-up in one week. Refer to group therapy intake. Coordinate with shelter staff on sleep environment.",
-    },
-    {
-      id: 2,
-      residentId: 1,
-      sessionDate: "2025-03-22",
-      socialWorker: "Maria Santos",
-      sessionType: "individual",
-      emotionalState: "Calm",
-      narrativeSummary:
-        "Client reported improved sleep with grounding techniques. Explored family reunification concerns. Discussed long-term housing options and employment readiness.",
-      interventions:
-        "Strengths-based counseling. Goal-setting worksheet completed. Discussed community resources for vocational training.",
-      followUpActions:
-        "Connect with vocational training program coordinator. Review housing application status. Continue weekly sessions.",
-    },
-    {
-      id: 3,
-      residentId: 2,
-      sessionDate: "2025-03-18",
-      socialWorker: "Jose Reyes",
-      sessionType: "group",
-      emotionalState: "Withdrawn",
-      narrativeSummary:
-        "Client participated minimally in group session on rebuilding trust. Observed non-verbal cues suggesting discomfort. After session, client approached worker to share concerns privately.",
-      interventions:
-        "Group facilitation — rebuilding trust module. Individual check-in post-session. Active listening and validation.",
-      followUpActions:
-        "Schedule individual session to process group experience. Monitor engagement in future group sessions.",
-    },
-  ]);
 
   const { data: user } = useQuery({
     queryKey: ["auth", "me"],
     queryFn: async () => {
-      // TODO: Call your C# auth endpoint
-      return { full_name: "Admin User", email: "admin@keeper.org" };
+      const me = await apiGetJson<AuthMeResponse>("/api/auth/me");
+      return {
+        email: me.email,
+        full_name: me.email?.split("@")[0] ?? "Admin",
+      };
     },
   });
 
   const { data: residents = [] } = useQuery<Resident[]>({
     queryKey: ["residents"],
     queryFn: async () => {
-      // TODO: Call your C# API endpoint
-      // const res = await fetch(`${API_BASE}/residents`);
-      // return res.json();
-      return [
-        { id: 1, name: "Ana Reyes", caseNumber: "KPR-2025-001" },
-        { id: 2, name: "Maria Cruz", caseNumber: "KPR-2025-002" },
-        { id: 3, name: "Liza Gomez", caseNumber: "KPR-2025-003" },
-        { id: 4, name: "Rosa Dela Cruz", caseNumber: "KPR-2025-004" },
-      ];
+      const rows = await apiGetJson<ResidentApi[]>("/api/admin-data/residents");
+      return rows.map((r) => ({
+        id: Number(r.id),
+        name: r.full_name || `Resident ${r.id}`,
+        caseNumber: r.resident_code || `RES-${r.id}`,
+      }));
     },
   });
 
-  const filteredResidents = residents.filter(
-    (r) =>
-      r.name.toLowerCase().includes(residentSearch.toLowerCase()) ||
-      r.caseNumber.toLowerCase().includes(residentSearch.toLowerCase())
-  );
+  const { data: residentRecordings = [] } = useQuery<ProcessRecording[]>({
+    queryKey: ["process-recordings", selectedResident?.id ?? null],
+    enabled: selectedResident !== null,
+    queryFn: async () => {
+      if (!selectedResident) return [];
+      const rows = await apiGetJson<ProcessRecordingApi[]>(
+        `/api/admin-data/process-recordings?residentId=${selectedResident.id}`
+      );
+      return rows.map((r) => ({
+        id: r.id,
+        residentId: r.resident_id,
+        sessionDate: r.session_date,
+        socialWorker: r.social_worker,
+        sessionType: r.session_type,
+        emotionalState: r.emotional_state,
+        narrativeSummary: r.narrative_summary,
+        interventions: r.interventions,
+        followUpActions: r.follow_up_actions,
+      }));
+    },
+  });
 
-  const residentRecordings = recordings
-    .filter((r) => r.residentId === selectedResident?.id)
-    .sort(
-      (a, b) =>
-        new Date(b.sessionDate).getTime() - new Date(a.sessionDate).getTime()
+  const createRecordingMutation = useMutation({
+    mutationFn: async (payload: {
+      resident_id: number;
+      session_date: string;
+      social_worker: string;
+      session_type: SessionType;
+      emotional_state: string;
+      narrative_summary: string;
+      interventions: string;
+      follow_up_actions: string;
+    }) => {
+      const apiBaseUrl = getApiBaseUrl();
+      if (!apiBaseUrl) throw new Error("API base URL not configured");
+      const response = await fetch(`${apiBaseUrl}/api/admin-data/process-recordings`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) throw new Error("Failed to save recording");
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["process-recordings", selectedResident?.id ?? null],
+      });
+    },
+  });
+
+  const searchQuery = residentSearch.toLowerCase();
+  const filteredResidents = residents.filter((r) => {
+    const residentName = (r.name ?? "").toLowerCase();
+    const residentCaseNumber = (r.caseNumber ?? "").toLowerCase();
+    return (
+      residentName.includes(searchQuery) || residentCaseNumber.includes(searchQuery)
     );
+  });
 
   function handleFieldChange(field: keyof typeof EMPTY_FORM, value: string) {
     setFormData((prev) => ({ ...prev, [field]: value }));
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedResident) return;
-    const newRecording: ProcessRecording = {
-      id: Date.now(),
-      residentId: selectedResident.id,
-      ...formData,
-    };
-    // TODO: POST to your C# API endpoint
-    setRecordings((prev) => [newRecording, ...prev]);
+    await createRecordingMutation.mutateAsync({
+      resident_id: selectedResident.id,
+      session_date: formData.sessionDate,
+      social_worker: formData.socialWorker,
+      session_type: formData.sessionType,
+      emotional_state: formData.emotionalState,
+      narrative_summary: formData.narrativeSummary,
+      interventions: formData.interventions,
+      follow_up_actions: formData.followUpActions,
+    });
     setFormData(EMPTY_FORM);
     setShowForm(false);
   }

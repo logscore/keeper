@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AdminSidebar from "@/components/admin/AdminSidebar";
+import { apiGetJson, type AuthMeResponse } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -178,263 +179,17 @@ const CONTRIBUTION_TYPE_COLORS: Record<ContributionType, string> = {
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 
-const MOCK_SUPPORTERS: Supporter[] = [
-  {
-    id: "s-001",
-    name: "Juana dela Fuente",
-    email: "juana.fuente@gmail.com",
-    phone: "+63 917 555 0101",
-    supporter_type: "Monetary Donor",
-    status: "Active",
-    organization: "",
-    is_anonymous: false,
-    joined_date: "2023-06-15",
-    notes: "Long-time supporter. Prefers email acknowledgments.",
-  },
-  {
-    id: "s-002",
-    name: "BDO Foundation",
-    email: "csr@bdofoundation.org",
-    phone: "+63 2 8888 0000",
-    supporter_type: "Corporate Partner",
-    status: "Active",
-    organization: "BDO Unibank",
-    is_anonymous: false,
-    joined_date: "2022-11-01",
-    notes: "Annual corporate partnership. Funds livelihood programs.",
-  },
-  {
-    id: "s-003",
-    name: "Carlos Manalo",
-    email: "c.manalo@lawfirm.ph",
-    phone: "+63 918 234 5678",
-    supporter_type: "Skills Contributor",
-    status: "Active",
-    organization: "Manalo & Associates Law",
-    is_anonymous: false,
-    joined_date: "2024-02-20",
-    notes: "Pro-bono legal services for residents undergoing court proceedings.",
-  },
-  {
-    id: "s-004",
-    name: "Anonymous Donor",
-    email: "",
-    phone: "",
-    supporter_type: "Monetary Donor",
-    status: "Active",
-    organization: "",
-    is_anonymous: true,
-    joined_date: "2024-09-10",
-    notes: "Prefers full anonymity. Regular monthly giving via bank transfer.",
-  },
-  {
-    id: "s-005",
-    name: "Sofia Reyes",
-    email: "sofia.reyes@volunteer.org",
-    phone: "+63 912 876 5432",
-    supporter_type: "Volunteer",
-    status: "Active",
-    organization: "",
-    is_anonymous: false,
-    joined_date: "2024-01-08",
-    notes: "Leads weekly livelihood skills workshops at Tahanan ng Pag-asa.",
-  },
-  {
-    id: "s-006",
-    name: "GMA Kapuso Foundation",
-    email: "outreach@gmakapuso.org",
-    phone: "+63 2 7777 1234",
-    supporter_type: "Social Media Advocate",
-    status: "Active",
-    organization: "GMA Network",
-    is_anonymous: false,
-    joined_date: "2025-01-15",
-    notes: "Partnered for social media awareness campaigns.",
-  },
-  {
-    id: "s-007",
-    name: "Pedro Lim",
-    email: "pedrolim@inkindonor.ph",
-    phone: "+63 920 333 4444",
-    supporter_type: "In-Kind Donor",
-    status: "Inactive",
-    organization: "Lim Family Enterprises",
-    is_anonymous: false,
-    joined_date: "2023-03-22",
-    notes: "Donated school supplies and hygiene kits. Not active since 2024.",
-  },
-];
-
-const MOCK_CONTRIBUTIONS: Contribution[] = [
-  {
-    id: "c-001",
-    supporter_id: "s-001",
-    supporter_name: "Juana dela Fuente",
-    contribution_type: "Monetary",
-    date: "2025-03-01",
-    amount: 25000,
-    currency: "PHP",
-    payment_method: "Bank Transfer",
-    campaign: "Livelihood Fund",
-    item_description: "",
-    estimated_value: 0,
-    hours: 0,
-    skill_description: "",
-    platform: "",
-    reach: "",
-    allocation_safehouse: "Tahanan ng Pag-asa",
-    allocation_program: "Livelihood Program",
-    receipt_number: "REC-2025-0031",
-    notes: "",
-  },
-  {
-    id: "c-002",
-    supporter_id: "s-002",
-    supporter_name: "BDO Foundation",
-    contribution_type: "Monetary",
-    date: "2025-01-10",
-    amount: 150000,
-    currency: "PHP",
-    payment_method: "Bank Transfer",
-    campaign: "Annual Giving",
-    item_description: "",
-    estimated_value: 0,
-    hours: 0,
-    skill_description: "",
-    platform: "",
-    reach: "",
-    allocation_safehouse: "",
-    allocation_program: "Livelihood Program",
-    receipt_number: "REC-2025-0001",
-    notes: "Corporate annual pledge. First installment.",
-  },
-  {
-    id: "c-003",
-    supporter_id: "s-003",
-    supporter_name: "Carlos Manalo",
-    contribution_type: "Skills",
-    date: "2025-02-14",
-    amount: 0,
-    currency: "PHP",
-    payment_method: "",
-    campaign: "",
-    item_description: "",
-    estimated_value: 18000,
-    hours: 6,
-    skill_description: "Legal consultation and documentation support for 3 residents pursuing protection orders.",
-    platform: "",
-    reach: "",
-    allocation_safehouse: "",
-    allocation_program: "Legal Aid Program",
-    receipt_number: "",
-    notes: "Estimated value based on pro-bono rate of ₱3,000/hour.",
-  },
-  {
-    id: "c-004",
-    supporter_id: "s-004",
-    supporter_name: "Anonymous Donor",
-    contribution_type: "Monetary",
-    date: "2025-04-01",
-    amount: 5000,
-    currency: "PHP",
-    payment_method: "Bank Transfer",
-    campaign: "General Fund",
-    item_description: "",
-    estimated_value: 0,
-    hours: 0,
-    skill_description: "",
-    platform: "",
-    reach: "",
-    allocation_safehouse: "Bagong Simula Center",
-    allocation_program: "General Operations",
-    receipt_number: "REC-2025-0044",
-    notes: "Monthly recurring contribution.",
-  },
-  {
-    id: "c-005",
-    supporter_id: "s-005",
-    supporter_name: "Sofia Reyes",
-    contribution_type: "Time / Volunteer",
-    date: "2025-03-15",
-    amount: 0,
-    currency: "PHP",
-    payment_method: "",
-    campaign: "",
-    item_description: "",
-    estimated_value: 0,
-    hours: 12,
-    skill_description: "Facilitated 3 livelihood skills workshops (sewing, beadwork, soap-making).",
-    platform: "",
-    reach: "",
-    allocation_safehouse: "Tahanan ng Pag-asa",
-    allocation_program: "Livelihood Program",
-    receipt_number: "",
-    notes: "",
-  },
-  {
-    id: "c-006",
-    supporter_id: "s-006",
-    supporter_name: "GMA Kapuso Foundation",
-    contribution_type: "Social Media",
-    date: "2025-02-28",
-    amount: 0,
-    currency: "PHP",
-    payment_method: "",
-    campaign: "Year-End Campaign",
-    item_description: "",
-    estimated_value: 0,
-    hours: 0,
-    skill_description: "",
-    platform: "Facebook",
-    reach: "~120,000 users",
-    allocation_safehouse: "",
-    allocation_program: "Community Outreach",
-    receipt_number: "",
-    notes: "Featured story campaign across GMA's social channels.",
-  },
-  {
-    id: "c-007",
-    supporter_id: "s-007",
-    supporter_name: "Pedro Lim",
-    contribution_type: "In-Kind",
-    date: "2024-12-10",
-    amount: 0,
-    currency: "PHP",
-    payment_method: "",
-    campaign: "",
-    item_description: "60 school supply kits (notebooks, pens, pencils, rulers) and 40 hygiene kits (shampoo, soap, toothbrush, toothpaste).",
-    estimated_value: 22000,
-    hours: 0,
-    skill_description: "",
-    platform: "",
-    reach: "",
-    allocation_safehouse: "Kalayaan Shelter",
-    allocation_program: "Educational Support",
-    receipt_number: "ACK-2024-0112",
-    notes: "Items delivered to Kalayaan Shelter on December 12.",
-  },
-  {
-    id: "c-008",
-    supporter_id: "s-001",
-    supporter_name: "Juana dela Fuente",
-    contribution_type: "Monetary",
-    date: "2025-01-05",
-    amount: 25000,
-    currency: "PHP",
-    payment_method: "Bank Transfer",
-    campaign: "Livelihood Fund",
-    item_description: "",
-    estimated_value: 0,
-    hours: 0,
-    skill_description: "",
-    platform: "",
-    reach: "",
-    allocation_safehouse: "Tahanan ng Pag-asa",
-    allocation_program: "Livelihood Program",
-    receipt_number: "REC-2025-0002",
-    notes: "",
-  },
-];
+type SupporterApi = Supporter;
+type DonationApi = {
+  id: string;
+  supporter_id: string;
+  supporter_name: string;
+  amount: number;
+  created_date: string;
+  type?: string | null;
+  campaign?: string | null;
+  allocation?: string | null;
+};
 
 // ─── Empty forms ──────────────────────────────────────────────────────────────
 
@@ -527,14 +282,14 @@ function DonorsPage() {
   const [activeTab, setActiveTab] = useState<"supporters" | "contributions">("supporters");
 
   // Supporter state
-  const [supporters, setSupporters] = useState<Supporter[]>(MOCK_SUPPORTERS);
+  const [supporters, setSupporters] = useState<Supporter[]>([]);
   const [supporterFilters, setSupporterFilters] = useState({ search: "", type: "", status: "" });
   const [panelMode, setPanelMode] = useState<"view" | "edit" | "add" | null>(null);
   const [panelSupporter, setPanelSupporter] = useState<Supporter | null>(null);
   const [supporterForm, setSupporterForm] = useState<Supporter>(EMPTY_SUPPORTER);
 
   // Contribution state
-  const [contributions, setContributions] = useState<Contribution[]>(MOCK_CONTRIBUTIONS);
+  const [contributions, setContributions] = useState<Contribution[]>([]);
   const [contribFilters, setContribFilters] = useState({ search: "", type: "", safehouse: "", program: "" });
   const [showContribForm, setShowContribForm] = useState(false);
   const [contribForm, setContribForm] = useState<Contribution>(EMPTY_CONTRIBUTION);
@@ -542,10 +297,52 @@ function DonorsPage() {
   const { data: user } = useQuery({
     queryKey: ["auth", "me"],
     queryFn: async () => {
-      // TODO: Call your C# auth endpoint
-      return { full_name: "Admin User", email: "admin@keeper.org" };
+      const me = await apiGetJson<AuthMeResponse>("/api/auth/me");
+      return {
+        email: me.email,
+        full_name: me.email?.split("@")[0] ?? "Admin",
+      };
     },
   });
+
+  const { data: supportersFromApi = [] } = useQuery<SupporterApi[]>({
+    queryKey: ["admin-data", "supporters"],
+    queryFn: () => apiGetJson<SupporterApi[]>("/api/admin-data/supporters"),
+  });
+
+  const { data: donationsFromApi = [] } = useQuery<DonationApi[]>({
+    queryKey: ["admin-data", "donations"],
+    queryFn: () => apiGetJson<DonationApi[]>("/api/admin-data/donations"),
+  });
+
+  useEffect(() => {
+    setSupporters(supportersFromApi);
+  }, [supportersFromApi]);
+
+  useEffect(() => {
+    const mapped = donationsFromApi.map((d): Contribution => ({
+      id: d.id,
+      supporter_id: d.supporter_id,
+      supporter_name: d.supporter_name || "Unknown supporter",
+      contribution_type: "Monetary",
+      date: d.created_date,
+      amount: Number(d.amount ?? 0),
+      currency: "PHP",
+      payment_method: "",
+      campaign: d.campaign ?? "",
+      item_description: "",
+      estimated_value: 0,
+      hours: 0,
+      skill_description: "",
+      platform: "",
+      reach: "",
+      allocation_safehouse: "",
+      allocation_program: d.allocation ?? "",
+      receipt_number: "",
+      notes: "",
+    }));
+    setContributions(mapped);
+  }, [donationsFromApi]);
 
   // ── Computed ───────────────────────────────────────────────────────────────
 

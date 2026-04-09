@@ -51,7 +51,10 @@ function Login() {
       }
 
       const user = await fetchMe();
-      await navigate({ to: roleBasedRedirect(user.roles) });
+      if (user) {
+        queryClient.setQueryData(["auth", "me"], user);
+      }
+      await navigate({ to: resolveRedirectPath(user) });
     },
   });
   const verifyMutation = useMutation({
@@ -60,7 +63,7 @@ function Login() {
     onSuccess: async (user) => {
       queryClient.setQueryData(["auth", "me"], user);
       await queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
-      await navigate({ to: roleBasedRedirect(user.roles) });
+      await navigate({ to: resolveRedirectPath(user) });
     },
   });
   const resendMutation = useMutation({
@@ -228,18 +231,27 @@ function Login() {
   );
 }
 
-function roleBasedRedirect(roles: string[]): "/admin" | "/dashboard" {
+function resolveRedirectPath(
+  user: AuthUserResponse | null | undefined,
+): "/admin" | "/dashboard" {
+  const roles = Array.isArray(user?.roles) ? user.roles : [];
   return roles.includes("Admin") ? "/admin" : "/dashboard";
 }
 
-async function fetchMe(): Promise<AuthUserResponse> {
+async function fetchMe(): Promise<AuthUserResponse | null> {
   const response = await fetch(`${apiBaseUrl}/api/auth/me`, {
     credentials: "include",
   });
   if (!response.ok) {
     throw new Error("Unable to load user info.");
   }
-  return response.json() as Promise<AuthUserResponse>;
+  const data = (await response.json().catch(() => null)) as
+    | AuthUserResponse
+    | null;
+  if (!data || !Array.isArray(data.roles)) {
+    return null;
+  }
+  return data;
 }
 
 async function submitLogin(input: {

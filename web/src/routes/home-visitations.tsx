@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import AdminSidebar from "@/components/admin/AdminSidebar";
+import { apiGetJson, getApiBaseUrl, type AuthMeResponse } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -61,6 +62,24 @@ interface CaseConference {
   decisionsMade: string;
   nextConferenceDate: string;
 }
+
+type ResidentApi = {
+  id: string;
+  full_name?: string;
+  resident_code?: string;
+};
+
+type HomeVisitApi = {
+  id: number;
+  resident_id: number;
+  visit_date: string;
+  staff_name: string;
+  visit_type: string;
+  home_environment_observations: string;
+  family_cooperation: string;
+  safety_concerns: string;
+  follow_up_actions: string;
+};
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -135,50 +154,6 @@ const EMPTY_CONFERENCE = {
 };
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
-
-const MOCK_VISITS: HomeVisit[] = [
-  {
-    id: 1,
-    residentId: 1,
-    visitDate: "2025-02-10",
-    staffName: "Maria Santos",
-    visitType: "Initial Assessment",
-    homeEnvironmentObservations:
-      "Extended family home in Parañaque. Three-room dwelling shared by 7 family members. Basic utilities present. Moderate cleanliness. No signs of ongoing threat from perpetrator in the area.",
-    familyCooperation: "Cooperative",
-    safetyConcerns:
-      "Perpetrator (ex-partner) reported to live two streets away. Family has been advised on safety protocols.",
-    followUpActions:
-      "Coordinate with barangay for protection order monitoring. Schedule follow-up in 3 weeks.",
-  },
-  {
-    id: 2,
-    residentId: 1,
-    visitDate: "2025-03-05",
-    staffName: "Maria Santos",
-    visitType: "Routine Follow-up",
-    homeEnvironmentObservations:
-      "Home environment remains stable. Resident's mother is actively participating in support. Livelihood materials visible — resident has started sewing projects.",
-    familyCooperation: "Cooperative",
-    safetyConcerns: "None identified during this visit.",
-    followUpActions:
-      "Continue monthly visits. Confirm livelihood program enrollment for next quarter.",
-  },
-  {
-    id: 3,
-    residentId: 2,
-    visitDate: "2025-03-20",
-    staffName: "Jose Reyes",
-    visitType: "Initial Assessment",
-    homeEnvironmentObservations:
-      "Single-room unit in informal settlement. Adequate ventilation but cramped. Child observed present. No functional kitchen — family relies on community shared cooking.",
-    familyCooperation: "Partially Cooperative",
-    safetyConcerns:
-      "Potential perpetrator (uncle) still living nearby and reportedly still in contact with extended family members. Resident expressed fear.",
-    followUpActions:
-      "Flag for urgent case conference. Refer to legal aid for restraining order. Increase visit frequency to bi-weekly.",
-  },
-];
 
 const MOCK_CONFERENCES: CaseConference[] = [
   {
@@ -275,6 +250,7 @@ function selectClass() {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 function HomeVisitationsPage() {
+  const queryClient = useQueryClient();
   const [selectedResident, setSelectedResident] = useState<Resident | null>(
     null
   );
@@ -289,38 +265,92 @@ function HomeVisitationsPage() {
   const [showConferenceForm, setShowConferenceForm] = useState(false);
   const [conferenceForm, setConferenceForm] = useState(EMPTY_CONFERENCE);
 
-  const [visits, setVisits] = useState<HomeVisit[]>(MOCK_VISITS);
   const [conferences, setConferences] =
     useState<CaseConference[]>(MOCK_CONFERENCES);
 
   const { data: user } = useQuery({
     queryKey: ["auth", "me"],
     queryFn: async () => {
-      // TODO: Call your C# auth endpoint
-      return { full_name: "Admin User", email: "admin@keeper.org" };
+      const me = await apiGetJson<AuthMeResponse>("/api/auth/me");
+      return {
+        email: me.email,
+        full_name: me.email?.split("@")[0] ?? "Admin",
+      };
     },
   });
 
   const { data: residents = [] } = useQuery<Resident[]>({
     queryKey: ["residents"],
     queryFn: async () => {
-      // TODO: Call your C# API endpoint
-      // const res = await fetch(`${API_BASE}/residents`);
-      // return res.json();
-      return [
-        { id: 1, name: "Ana Reyes", caseNumber: "KPR-2025-001" },
-        { id: 2, name: "Maria Cruz", caseNumber: "KPR-2025-002" },
-        { id: 3, name: "Liza Gomez", caseNumber: "KPR-2025-003" },
-        { id: 4, name: "Rosa Dela Cruz", caseNumber: "KPR-2025-004" },
-      ];
+      const rows = await apiGetJson<ResidentApi[]>("/api/admin-data/residents");
+      return rows.map((r) => ({
+        id: Number(r.id),
+        name: r.full_name || `Resident ${r.id}`,
+        caseNumber: r.resident_code || `RES-${r.id}`,
+      }));
     },
   });
 
-  const filteredResidents = residents.filter(
-    (r) =>
-      r.name.toLowerCase().includes(residentSearch.toLowerCase()) ||
-      r.caseNumber.toLowerCase().includes(residentSearch.toLowerCase())
-  );
+  const { data: visits = [] } = useQuery<HomeVisit[]>({
+    queryKey: ["home-visitations"],
+    queryFn: async () => {
+      const rows = await apiGetJson<HomeVisitApi[]>("/api/admin-data/home-visitations");
+      const normalizeVisitType = (value: string): VisitType => {
+        if (VISIT_TYPES.includes(value as VisitType)) return value as VisitType;
+        return "Routine Follow-up";
+      };
+      const normalizeCooperation = (value: string): FamilyCooperation => {
+        if (COOPERATION_LEVELS.includes(value as FamilyCooperation)) return value as FamilyCooperation;
+        return "Cooperative";
+      };
+      return rows.map((v) => ({
+        id: v.id,
+        residentId: v.resident_id,
+        visitDate: v.visit_date,
+        staffName: v.staff_name,
+        visitType: normalizeVisitType(v.visit_type),
+        homeEnvironmentObservations: v.home_environment_observations,
+        familyCooperation: normalizeCooperation(v.family_cooperation),
+        safetyConcerns: v.safety_concerns,
+        followUpActions: v.follow_up_actions,
+      }));
+    },
+  });
+
+  const createVisitMutation = useMutation({
+    mutationFn: async (payload: {
+      resident_id: number;
+      visit_date: string;
+      staff_name: string;
+      visit_type: VisitType;
+      home_environment_observations: string;
+      family_cooperation: FamilyCooperation;
+      safety_concerns: string;
+      follow_up_actions: string;
+    }) => {
+      const apiBaseUrl = getApiBaseUrl();
+      if (!apiBaseUrl) throw new Error("API base URL not configured");
+      const response = await fetch(`${apiBaseUrl}/api/admin-data/home-visitations`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) throw new Error("Failed to save visit");
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["home-visitations"] });
+    },
+  });
+
+  const searchQuery = residentSearch.toLowerCase();
+  const filteredResidents = residents.filter((r) => {
+    const residentName = (r.name ?? "").toLowerCase();
+    const residentCaseNumber = (r.caseNumber ?? "").toLowerCase();
+    return (
+      residentName.includes(searchQuery) || residentCaseNumber.includes(searchQuery)
+    );
+  });
 
   const residentVisits = visits
     .filter((v) => v.residentId === selectedResident?.id)
@@ -354,16 +384,19 @@ function HomeVisitationsPage() {
     setConferenceForm(EMPTY_CONFERENCE);
   }
 
-  function handleVisitSubmit(e: React.FormEvent) {
+  async function handleVisitSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedResident) return;
-    const newVisit: HomeVisit = {
-      id: Date.now(),
-      residentId: selectedResident.id,
-      ...visitForm,
-    };
-    // TODO: POST to your C# API endpoint
-    setVisits((prev) => [newVisit, ...prev]);
+    await createVisitMutation.mutateAsync({
+      resident_id: selectedResident.id,
+      visit_date: visitForm.visitDate,
+      staff_name: visitForm.staffName,
+      visit_type: visitForm.visitType,
+      home_environment_observations: visitForm.homeEnvironmentObservations,
+      family_cooperation: visitForm.familyCooperation,
+      safety_concerns: visitForm.safetyConcerns,
+      follow_up_actions: visitForm.followUpActions,
+    });
     setVisitForm(EMPTY_VISIT);
     setShowVisitForm(false);
   }

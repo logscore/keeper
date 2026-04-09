@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AdminSidebar from "@/components/admin/AdminSidebar";
+import { apiGetJson, type AuthMeResponse } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -148,179 +149,20 @@ const RISK_COLORS: Record<RiskLevel, string> = {
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 
-const MOCK_RESIDENTS: ResidentProfile[] = [
-  {
-    id: "r-001",
-    resident_code: "KPR-2025-001",
-    full_name: "Ana Reyes",
-    date_of_birth: "1998-04-12",
-    sex: "Female",
-    civil_status: "Single",
-    nationality: "Filipino",
-    case_status: "Active Care",
-    case_category: "Trafficked",
-    case_subcategories: ["Labor Trafficking", "Debt Bondage"],
-    risk_level: "High",
-    has_disability: false,
-    disability_type: "",
-    is_4ps_beneficiary: true,
-    is_solo_parent: false,
-    is_indigenous: false,
-    is_informal_settler: true,
-    admission_date: "2025-01-15",
-    safehouse_id: "sh-001",
-    safehouse_name: "Tahanan ng Pag-asa",
-    referred_by: "DSWD Region IV-A",
-    referral_source: "Government Agency (DSWD)",
-    assigned_social_worker: "Maria Santos",
-    reintegration_plan:
-      "Vocational training enrollment, family mediation sessions, and housing assistance application.",
-    reintegration_target_date: "2025-09-15",
-    reintegration_status: "In Progress",
-  },
-  {
-    id: "r-002",
-    resident_code: "KPR-2025-002",
-    full_name: "Maria Cruz",
-    date_of_birth: "2003-08-22",
-    sex: "Female",
-    civil_status: "Single",
-    nationality: "Filipino",
-    case_status: "Assessment",
-    case_category: "Physical Abuse",
-    case_subcategories: ["Intimate Partner Violence"],
-    risk_level: "Critical",
-    has_disability: false,
-    disability_type: "",
-    is_4ps_beneficiary: false,
-    is_solo_parent: true,
-    is_indigenous: false,
-    is_informal_settler: true,
-    admission_date: "2025-03-02",
-    safehouse_id: "sh-002",
-    safehouse_name: "Bagong Simula Center",
-    referred_by: "PNP Women & Children Protection Desk",
-    referral_source: "Police / Law Enforcement",
-    assigned_social_worker: "Jose Reyes",
-    reintegration_plan: "",
-    reintegration_target_date: "",
-    reintegration_status: "",
-  },
-  {
-    id: "r-003",
-    resident_code: "KPR-2025-003",
-    full_name: "Liza Gomez",
-    date_of_birth: "1995-11-05",
-    sex: "Female",
-    civil_status: "Married",
-    nationality: "Filipino",
-    case_status: "Reintegration",
-    case_category: "Sexual Abuse",
-    case_subcategories: ["Rape", "Online Sexual Exploitation"],
-    risk_level: "Medium",
-    has_disability: true,
-    disability_type: "Post-Traumatic Stress Disorder (PTSD)",
-    is_4ps_beneficiary: true,
-    is_solo_parent: false,
-    is_indigenous: false,
-    is_informal_settler: false,
-    admission_date: "2024-10-18",
-    safehouse_id: "sh-001",
-    safehouse_name: "Tahanan ng Pag-asa",
-    referred_by: "Ospital ng Makati",
-    referral_source: "Hospital / Medical Facility",
-    assigned_social_worker: "Maria Santos",
-    reintegration_plan:
-      "Return to extended family with scheduled follow-up home visits. Outpatient psychosocial support continued.",
-    reintegration_target_date: "2025-06-30",
-    reintegration_status: "On Track",
-  },
-  {
-    id: "r-004",
-    resident_code: "KPR-2024-018",
-    full_name: "Rosa Dela Cruz",
-    date_of_birth: "2010-02-14",
-    sex: "Female",
-    civil_status: "Single",
-    nationality: "Filipino",
-    case_status: "Active Care",
-    case_category: "Neglected",
-    case_subcategories: ["Child Neglect", "Medical Neglect"],
-    risk_level: "High",
-    has_disability: false,
-    disability_type: "",
-    is_4ps_beneficiary: false,
-    is_solo_parent: false,
-    is_indigenous: true,
-    is_informal_settler: false,
-    admission_date: "2024-09-30",
-    safehouse_id: "sh-003",
-    safehouse_name: "Kalayaan Shelter",
-    referred_by: "Barangay Tanod, Brgy. 412",
-    referral_source: "Community / Barangay",
-    assigned_social_worker: "Ana Villanueva",
-    reintegration_plan: "",
-    reintegration_target_date: "",
-    reintegration_status: "",
-  },
-  {
-    id: "r-005",
-    resident_code: "KPR-2025-005",
-    full_name: "Carla Mendoza",
-    date_of_birth: "1990-06-30",
-    sex: "Female",
-    civil_status: "Separated",
-    nationality: "Filipino",
-    case_status: "Graduated",
-    case_category: "Economic Abuse",
-    case_subcategories: ["Financial Control", "Forced Economic Dependency"],
-    risk_level: "Low",
-    has_disability: false,
-    disability_type: "",
-    is_4ps_beneficiary: true,
-    is_solo_parent: true,
-    is_indigenous: false,
-    is_informal_settler: false,
-    admission_date: "2024-06-10",
-    safehouse_id: "sh-002",
-    safehouse_name: "Bagong Simula Center",
-    referred_by: "NGO Babae Muna",
-    referral_source: "NGO / Civil Society",
-    assigned_social_worker: "Jose Reyes",
-    reintegration_plan:
-      "Completed livelihood training program. Now employed at Marikina cooperative.",
-    reintegration_target_date: "2025-01-10",
-    reintegration_status: "Completed",
-  },
-  {
-    id: "r-006",
-    resident_code: "KPR-2025-007",
-    full_name: "Nena Bautista",
-    date_of_birth: "2005-09-17",
-    sex: "Female",
-    civil_status: "Single",
-    nationality: "Filipino",
-    case_status: "Intake",
-    case_category: "Abandoned",
-    case_subcategories: ["Child Abandonment"],
-    risk_level: "Medium",
-    has_disability: false,
-    disability_type: "",
-    is_4ps_beneficiary: false,
-    is_solo_parent: false,
-    is_indigenous: false,
-    is_informal_settler: true,
-    admission_date: "2025-04-01",
-    safehouse_id: "sh-003",
-    safehouse_name: "Kalayaan Shelter",
-    referred_by: "Hotline self-referral",
-    referral_source: "Self-Referral",
-    assigned_social_worker: "Ana Villanueva",
-    reintegration_plan: "",
-    reintegration_target_date: "",
-    reintegration_status: "",
-  },
-];
+type ResidentApi = {
+  id: string;
+  resident_code: string;
+  full_name?: string;
+  date_of_birth?: string;
+  sex?: string;
+  case_status?: string;
+  risk_level?: string;
+  case_category?: string;
+  safehouse_id?: string;
+  safehouse_name?: string;
+  assigned_social_worker?: string;
+  admission_date?: string;
+};
 
 const EMPTY_FORM: ResidentProfile = {
   id: "",
@@ -387,7 +229,7 @@ function textareaClass() {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 function CaseloadPage() {
-  const [residents, setResidents] = useState<ResidentProfile[]>(MOCK_RESIDENTS);
+  const [residents, setResidents] = useState<ResidentProfile[]>([]);
   const [filters, setFilters] = useState({
     search: "",
     status: "",
@@ -404,10 +246,67 @@ function CaseloadPage() {
   const { data: user } = useQuery({
     queryKey: ["auth", "me"],
     queryFn: async () => {
-      // TODO: Call your C# auth endpoint
-      return { full_name: "Admin User", email: "admin@keeper.org" };
+      const me = await apiGetJson<AuthMeResponse>("/api/auth/me");
+      return {
+        email: me.email,
+        full_name: me.email?.split("@")[0] ?? "Admin",
+      };
     },
   });
+
+  const { data: residentsFromApi = [] } = useQuery<ResidentApi[]>({
+    queryKey: ["admin-data", "residents", "caseload"],
+    queryFn: () => apiGetJson<ResidentApi[]>("/api/admin-data/residents"),
+  });
+
+  useEffect(() => {
+    const normalizeCaseStatus = (value?: string): CaseStatus => {
+      const v = (value ?? "").toLowerCase();
+      if (v === "intake") return "Intake";
+      if (v === "assessment") return "Assessment";
+      if (v === "reintegration") return "Reintegration";
+      if (v === "closed") return "Closed";
+      if (v === "graduated") return "Graduated";
+      return "Active Care";
+    };
+    const normalizeRisk = (value?: string): RiskLevel => {
+      const v = (value ?? "").toLowerCase();
+      if (v === "low") return "Low";
+      if (v === "high") return "High";
+      if (v === "critical") return "Critical";
+      return "Medium";
+    };
+    setResidents(
+      residentsFromApi.map((r) => ({
+        id: r.id,
+        resident_code: r.resident_code || `RES-${r.id}`,
+        full_name: r.full_name || `Resident ${r.id}`,
+        date_of_birth: r.date_of_birth || "",
+        sex: r.sex || "Female",
+        civil_status: "",
+        nationality: "Filipino",
+        case_status: normalizeCaseStatus(r.case_status),
+        case_category: r.case_category || "",
+        case_subcategories: [],
+        risk_level: normalizeRisk(r.risk_level),
+        has_disability: false,
+        disability_type: "",
+        is_4ps_beneficiary: false,
+        is_solo_parent: false,
+        is_indigenous: false,
+        is_informal_settler: false,
+        admission_date: r.admission_date || "",
+        safehouse_id: r.safehouse_id || "",
+        safehouse_name: r.safehouse_name || "",
+        referred_by: "",
+        referral_source: "",
+        assigned_social_worker: r.assigned_social_worker || "",
+        reintegration_plan: "",
+        reintegration_target_date: "",
+        reintegration_status: "",
+      }))
+    );
+  }, [residentsFromApi]);
 
   // ── Filtering ──────────────────────────────────────────────────────────────
 
