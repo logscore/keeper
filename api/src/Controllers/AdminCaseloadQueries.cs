@@ -56,6 +56,7 @@ internal static class AdminCaseloadQueries
                         ISNULL(r.family_solo_parent, 0) AS FamilySoloParent,
                         ISNULL(r.family_indigenous, 0) AS FamilyIndigenous,
                         ISNULL(r.family_informal_settler, 0) AS FamilyInformalSettler,
+                        ISNULL(r.family_parent_pwd, 0) AS FamilyParentPwd,
                         r.date_of_admission AS DateOfAdmission,
                         r.referral_source AS ReferralSource,
                         r.referring_agency_person AS ReferringAgencyPerson,
@@ -122,6 +123,7 @@ internal static class AdminCaseloadQueries
             IsSoloParent = r.FamilySoloParent,
             IsIndigenous = r.FamilyIndigenous,
             IsInformalSettler = r.FamilyInformalSettler,
+            FamilyParentPwd = r.FamilyParentPwd,
             AdmissionDate = FormatDateOnly(r.DateOfAdmission),
             SafehouseId = r.SafehouseId?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
             SafehouseName = r.SafehouseName?.Trim() ?? string.Empty,
@@ -303,6 +305,7 @@ internal static class AdminCaseloadQueries
         public bool FamilySoloParent { get; set; }
         public bool FamilyIndigenous { get; set; }
         public bool FamilyInformalSettler { get; set; }
+        public bool FamilyParentPwd { get; set; }
         public DateTime? DateOfAdmission { get; set; }
         public string? ReferralSource { get; set; }
         public string? ReferringAgencyPerson { get; set; }
