@@ -215,7 +215,8 @@ internal static class AdminCaseloadQueries
             return string.Empty;
         }
 
-        return DateOnly.FromDateTime(dt.Value.Date)
+        return DateOnly
+            .FromDateTime(dt.Value.Date)
             .ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
     }
 
@@ -245,12 +246,11 @@ internal static class AdminCaseloadQueries
         return string.Join(
             " ",
             s.Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                .Select(
-                    w =>
-                        w.Length == 0
-                            ? w
-                            : char.ToUpperInvariant(w[0])
-                                + (w.Length > 1 ? w.Substring(1).ToLowerInvariant() : "")
+                .Select(w =>
+                    w.Length == 0
+                        ? w
+                        : char.ToUpperInvariant(w[0])
+                            + (w.Length > 1 ? w.Substring(1).ToLowerInvariant() : "")
                 )
         );
     }
