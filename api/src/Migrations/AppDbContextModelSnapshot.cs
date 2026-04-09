@@ -223,11 +223,8 @@ namespace api.Migrations
             modelBuilder.Entity("api.Models.Donation", b =>
                 {
                     b.Property<int>("DonationId")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("int")
                         .HasColumnName("donation_id");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DonationId"));
 
                     b.Property<decimal>("Amount")
                         .HasPrecision(18, 2)
@@ -281,7 +278,7 @@ namespace api.Migrations
                         .HasColumnType("int")
                         .HasColumnName("referral_post_id");
 
-                    b.Property<int>("SupporterId")
+                    b.Property<int?>("SupporterId")
                         .HasColumnType("int")
                         .HasColumnName("supporter_id");
 

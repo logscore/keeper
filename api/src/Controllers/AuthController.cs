@@ -30,7 +30,8 @@ public class AuthController : ControllerBase
         PendingSignupChallengeStore pendingSignupChallengeStore,
         PendingLoginChallengeStore pendingLoginChallengeStore,
         IWebHostEnvironment environment,
-        AppDbContext db)
+        AppDbContext db
+    )
     {
         _userManager = userManager;
         _signInManager = signInManager;
@@ -97,20 +98,30 @@ public class AuthController : ControllerBase
             );
         }
 
-        var nextSupporterId = await _db.Supporters.AnyAsync(cancellationToken)
-            ? await _db.Supporters.MaxAsync(s => s.SupporterId, cancellationToken) + 1
-            : 1;
+        var normalizedEmail = email.Trim();
+        var existingSupporter = await _db
+            .Supporters.Where(s => s.Email != null)
+            .FirstOrDefaultAsync(s => s.Email!.Trim() == normalizedEmail, cancellationToken);
 
-        _db.Supporters.Add(new Supporter
+        if (existingSupporter is null)
         {
-            SupporterId = nextSupporterId,
-            Email = email,
-            SupporterType = "MonetaryDonor",
-            Status = "Active",
-            CreatedAt = DateTime.UtcNow,
-            AcquisitionChannel = "Website",
-        });
-        await _db.SaveChangesAsync(cancellationToken);
+            var nextSupporterId = await _db.Supporters.AnyAsync(cancellationToken)
+                ? await _db.Supporters.MaxAsync(s => s.SupporterId, cancellationToken) + 1
+                : 1;
+
+            _db.Supporters.Add(
+                new Supporter
+                {
+                    SupporterId = nextSupporterId,
+                    Email = email,
+                    SupporterType = "MonetaryDonor",
+                    Status = "Active",
+                    CreatedAt = DateTime.UtcNow,
+                    AcquisitionChannel = "Website",
+                }
+            );
+            await _db.SaveChangesAsync(cancellationToken);
+        }
 
         _pendingSignupChallengeStore.Write(Response, user.Id, email, _environment.IsDevelopment());
 
@@ -141,8 +152,7 @@ public class AuthController : ControllerBase
         }
 
         var user =
-            await _userManager.FindByEmailAsync(email)
-            ?? await _userManager.FindByNameAsync(email);
+            await _userManager.FindByEmailAsync(email) ?? await _userManager.FindByNameAsync(email);
 
         if (user is null)
         {
@@ -163,10 +173,12 @@ public class AuthController : ControllerBase
 
         if (signInResult.IsLockedOut)
         {
-            return Unauthorized(new
-            {
-                error = "Too many failed attempts. Your account is temporarily locked. Please try again later."
-            });
+            return Unauthorized(
+                new
+                {
+                    error = "Too many failed attempts. Your account is temporarily locked. Please try again later.",
+                }
+            );
         }
 
         // Correct password + 2FA enabled returns Succeeded=false and RequiresTwoFactor=true.
@@ -177,14 +189,21 @@ public class AuthController : ControllerBase
             // first-party cookie so resend/verify work when the SPA and API are on different
             // origins and Identity's intermediate 2FA cookie is not stored by the browser.
             await SendLoginCodeAsync(user, cancellationToken);
-            _pendingLoginChallengeStore.Write(Response, user.Id, user.Email ?? email, _environment.IsDevelopment());
+            _pendingLoginChallengeStore.Write(
+                Response,
+                user.Id,
+                user.Email ?? email,
+                _environment.IsDevelopment()
+            );
 
-            return Ok(new AuthChallengeResponse
-            {
-                RequiresCode = true,
-                Flow = "login",
-                Email = user.Email ?? email
-            });
+            return Ok(
+                new AuthChallengeResponse
+                {
+                    RequiresCode = true,
+                    Flow = "login",
+                    Email = user.Email ?? email,
+                }
+            );
         }
 
         if (!signInResult.Succeeded)
@@ -192,12 +211,14 @@ public class AuthController : ControllerBase
             return Unauthorized(new { error = "Invalid email or password." });
         }
 
-        return Ok(new AuthChallengeResponse
-        {
-            RequiresCode = false,
-            Flow = "login",
-            Email = email
-        });
+        return Ok(
+            new AuthChallengeResponse
+            {
+                RequiresCode = false,
+                Flow = "login",
+                Email = email,
+            }
+        );
     }
 
     [AllowAnonymous]
@@ -279,7 +300,11 @@ public class AuthController : ControllerBase
             return Unauthorized(new { error = "Your login session expired. Please try again." });
         }
 
-        var isValid = await _userManager.VerifyTwoFactorTokenAsync(user, TokenOptions.DefaultEmailProvider, request.Code.Trim());
+        var isValid = await _userManager.VerifyTwoFactorTokenAsync(
+            user,
+            TokenOptions.DefaultEmailProvider,
+            request.Code.Trim()
+        );
         if (!isValid)
         {
             return Unauthorized(new { error = "Invalid or expired code." });
@@ -294,7 +319,10 @@ public class AuthController : ControllerBase
     [AllowAnonymous]
     [EnableRateLimiting("auth")]
     [HttpPost("login/resend")]
-    public async Task<IActionResult> ResendLoginCode([FromBody] SignupChallengeRequest? request, CancellationToken cancellationToken)
+    public async Task<IActionResult> ResendLoginCode(
+        [FromBody] SignupChallengeRequest? request,
+        CancellationToken cancellationToken
+    )
     {
         var user = await ResolvePendingLoginUserAsync(request?.Email);
         if (user is null)
@@ -341,8 +369,10 @@ public class AuthController : ControllerBase
         var email = user.Email?.Trim();
         if (!string.IsNullOrEmpty(email))
         {
-            var supporter = await _db.Supporters
-                .FirstOrDefaultAsync(s => s.Email == email, cancellationToken);
+            var supporter = await _db.Supporters.FirstOrDefaultAsync(
+                s => s.Email == email,
+                cancellationToken
+            );
             if (supporter is not null)
             {
                 supporter.Email = null;
@@ -373,7 +403,8 @@ public class AuthController : ControllerBase
         int? supporterId = null;
         if (!string.IsNullOrWhiteSpace(user.Email))
         {
-            supporterId = await _db.Supporters.AsNoTracking()
+            supporterId = await _db
+                .Supporters.AsNoTracking()
                 .Where(s => s.Email == user.Email)
                 .Select(s => (int?)s.SupporterId)
                 .FirstOrDefaultAsync();
@@ -383,7 +414,7 @@ public class AuthController : ControllerBase
         {
             Email = user.Email ?? string.Empty,
             Roles = roles.ToArray(),
-            SupporterId = supporterId
+            SupporterId = supporterId,
         };
     }
 
@@ -483,8 +514,14 @@ public class AuthController : ControllerBase
         var fromIdentity = await _signInManager.GetTwoFactorAuthenticationUserAsync();
         if (fromIdentity is not null)
         {
-            if (!string.IsNullOrWhiteSpace(trimmedRequested)
-                && !string.Equals(fromIdentity.Email, trimmedRequested, StringComparison.OrdinalIgnoreCase))
+            if (
+                !string.IsNullOrWhiteSpace(trimmedRequested)
+                && !string.Equals(
+                    fromIdentity.Email,
+                    trimmedRequested,
+                    StringComparison.OrdinalIgnoreCase
+                )
+            )
             {
                 return null;
             }
@@ -499,15 +536,19 @@ public class AuthController : ControllerBase
         }
 
         var user = await _userManager.FindByIdAsync(challenge.UserId);
-        if (user is null
-            || !string.Equals(user.Email, challenge.Email, StringComparison.OrdinalIgnoreCase))
+        if (
+            user is null
+            || !string.Equals(user.Email, challenge.Email, StringComparison.OrdinalIgnoreCase)
+        )
         {
             _pendingLoginChallengeStore.Clear(Response, _environment.IsDevelopment());
             return null;
         }
 
-        if (!string.IsNullOrWhiteSpace(trimmedRequested)
-            && !string.Equals(user.Email, trimmedRequested, StringComparison.OrdinalIgnoreCase))
+        if (
+            !string.IsNullOrWhiteSpace(trimmedRequested)
+            && !string.Equals(user.Email, trimmedRequested, StringComparison.OrdinalIgnoreCase)
+        )
         {
             return null;
         }

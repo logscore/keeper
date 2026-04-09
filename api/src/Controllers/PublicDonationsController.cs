@@ -16,23 +16,26 @@ public class PublicDonationsController : ControllerBase
 {
     private static readonly string[] ProgramAreas =
     [
-        "Education", "Transport", "Wellbeing", "Operations", "Outreach", "Maintenance",
+        "Education",
+        "Transport",
+        "Wellbeing",
+        "Operations",
+        "Outreach",
+        "Maintenance",
     ];
 
     private readonly AppDbContext _db;
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly IConfiguration _config;
     private readonly ILogger<PublicDonationsController> _logger;
 
     public PublicDonationsController(
         AppDbContext db,
         UserManager<ApplicationUser> userManager,
-        IConfiguration config,
-        ILogger<PublicDonationsController> logger)
+        ILogger<PublicDonationsController> logger
+    )
     {
         _db = db;
         _userManager = userManager;
-        _config = config;
         _logger = logger;
     }
 
@@ -41,34 +44,37 @@ public class PublicDonationsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<CreatePublicDonationResponse>> Create(
         [FromBody] CreatePublicDonationRequest body,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         var amount = body.Amount;
         if (amount is <= 0m or > 1_000_000m)
         {
-            return BadRequest(new { error = "Amount must be greater than 0 and at most 1,000,000." });
+            return BadRequest(
+                new { error = "Amount must be greater than 0 and at most 1,000,000." }
+            );
         }
 
-        var anonymousSupporterId = _config.GetValue("Donations:AnonymousSupporterId", 1);
-        var supporterId = anonymousSupporterId;
+        int? supporterId = null;
 
         if (User.Identity?.IsAuthenticated == true)
         {
             var user = await _userManager.GetUserAsync(User);
             if (user is not null && !string.IsNullOrWhiteSpace(user.Email))
             {
-                var linked = await _db.Supporters.AsNoTracking()
-                    .Where(s => s.Email == user.Email)
+                var normalizedEmail = user.Email.Trim();
+                var linked = await _db
+                    .Supporters.AsNoTracking()
+                    .Where(s => s.Email != null && s.Email.Trim() == normalizedEmail)
                     .Select(s => (int?)s.SupporterId)
                     .FirstOrDefaultAsync(cancellationToken);
                 if (linked.HasValue)
-                {
                     supporterId = linked.Value;
-                }
             }
         }
 
-        var safehouseIds = await _db.Safehouses.AsNoTracking()
+        var safehouseIds = await _db
+            .Safehouses.AsNoTracking()
             .Select(s => s.SafehouseId)
             .ToListAsync(cancellationToken);
 
@@ -78,7 +84,8 @@ public class PublicDonationsController : ControllerBase
             return Problem(
                 title: "Cannot complete donation",
                 detail: "No safehouses are configured.",
-                statusCode: StatusCodes.Status503ServiceUnavailable);
+                statusCode: StatusCodes.Status503ServiceUnavailable
+            );
         }
 
         var safehouseId = safehouseIds[Random.Shared.Next(safehouseIds.Count)];
@@ -114,26 +121,40 @@ public class PublicDonationsController : ControllerBase
         try
         {
             // donations.donation_id is not identity; reserve the next key under lock.
-            donation.DonationId = await _db.Database
-                .SqlQuery<int>($"""
+            donation.DonationId = await _db
+                .Database.SqlQuery<int>(
+                    $"""
                     SELECT ISNULL(MAX(donation_id), 0) + 1 AS [Value]
                     FROM donations WITH (UPDLOCK, HOLDLOCK)
-                    """)
+                    """
+                )
                 .SingleAsync(cancellationToken);
 
             _db.Donations.Add(donation);
             await _db.SaveChangesAsync(cancellationToken);
 
             allocation.DonationId = donation.DonationId;
-            allocation.AllocationId = await _db.Database
-                .SqlQuery<int>($"""
+            allocation.AllocationId = await _db
+                .Database.SqlQuery<int>(
+                    $"""
                     SELECT ISNULL(MAX(allocation_id), 0) + 1 AS [Value]
                     FROM donation_allocations WITH (UPDLOCK, HOLDLOCK)
-                    """)
+                    """
+                )
                 .SingleAsync(cancellationToken);
             _db.DonationAllocations.Add(allocation);
             await _db.SaveChangesAsync(cancellationToken);
             await tx.CommitAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex)
+        {
+            await tx.RollbackAsync(cancellationToken);
+            _logger.LogError(ex, "Failed to persist public donation due to DB schema mismatch.");
+            return Problem(
+                title: "Donation failed",
+                detail: "Could not save your donation due to a database schema mismatch. Please apply the latest API migration and try again.",
+                statusCode: StatusCodes.Status500InternalServerError
+            );
         }
         catch (Exception ex)
         {
@@ -142,14 +163,17 @@ public class PublicDonationsController : ControllerBase
             return Problem(
                 title: "Donation failed",
                 detail: "Could not save your donation. Please try again later.",
-                statusCode: StatusCodes.Status500InternalServerError);
+                statusCode: StatusCodes.Status500InternalServerError
+            );
         }
 
-        return Ok(new CreatePublicDonationResponse
-        {
-            DonationId = donation.DonationId,
-            ProgramArea = programArea,
-            SafehouseId = safehouseId,
-        });
+        return Ok(
+            new CreatePublicDonationResponse
+            {
+                DonationId = donation.DonationId,
+                ProgramArea = programArea,
+                SafehouseId = safehouseId,
+            }
+        );
     }
 }
