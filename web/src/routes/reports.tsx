@@ -179,9 +179,7 @@ function ReportsPage() {
   }));
   const outcomeIndicators = reportsSummary?.outcomeIndicators ?? [];
 
-  // ── ML Predictions (single server-side aggregate; social remains sample) ──────
-  const ML_HEADERS = { "Content-Type": "application/json" };
-
+  // ── ML Predictions ──────────────────────────────────────────────────────────
   const { data: mlAggregate, isLoading: mlAggregateLoading } = useQuery({
     queryKey: ["admin", "ml", "reports-aggregate"],
     queryFn: () =>
@@ -190,67 +188,6 @@ function ReportsPage() {
     retry: false,
   });
 
-  const { data: mlSocialEngagement, isLoading: socialEngagementLoading } =
-    useQuery({
-      queryKey: ["ml", "social", "sample"],
-      queryFn: () =>
-        apiGetJson<{ predicted_engagement_rate: number }>(
-          "/api/ml/social/predict",
-          {
-            method: "POST",
-            headers: ML_HEADERS,
-            body: JSON.stringify({
-              caption_length: 180,
-              num_hashtags: 5,
-              boost_budget_php: 0,
-              follower_count_at_post: 3500,
-              post_hour: 10,
-              has_call_to_action: 1,
-              is_boosted: 0,
-              platform: "Facebook",
-              post_type: "Photo",
-              media_type: "Image",
-              content_topic: "Impact Story",
-              sentiment_tone: "Inspirational",
-              post_dow: "Tuesday",
-              call_to_action_type: "Donate",
-            }),
-          }
-        ),
-      staleTime: Infinity,
-      retry: false,
-    });
-
-  const { data: mlSocialCausal, isLoading: socialCausalLoading } = useQuery({
-    queryKey: ["ml", "social-causal", "sample"],
-    queryFn: () =>
-      apiGetJson<{
-        estimated_ite: number;
-        p_outcome_if_boosted: number;
-        p_outcome_if_not_boosted: number;
-        ate: number;
-      }>("/api/ml/social/causal/predict", {
-        method: "POST",
-        headers: ML_HEADERS,
-        body: JSON.stringify({
-          caption_length: 180,
-          num_hashtags: 5,
-          follower_count_at_post: 3500,
-          post_hour: 10,
-          has_call_to_action: 1,
-          boost_budget_php: 500,
-          platform: "Facebook",
-          post_type: "Photo",
-          media_type: "Image",
-          content_topic: "Impact Story",
-          sentiment_tone: "Inspirational",
-          post_dow: "Tuesday",
-          call_to_action_type: "Donate",
-        }),
-      }),
-    staleTime: Infinity,
-    retry: false,
-  });
 
   const retentionLoading = mlAggregateLoading;
   const growthLoading = mlAggregateLoading;
@@ -310,9 +247,7 @@ function ReportsPage() {
                 retentionLoading ||
                 growthLoading ||
                 progressLoading ||
-                trajectoryLoading ||
-                socialEngagementLoading ||
-                socialCausalLoading
+                trajectoryLoading
               }
               className="inline-flex items-center gap-2 h-9 px-4 rounded-3xl border border-border bg-card text-sm font-body text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -864,79 +799,6 @@ function ReportsPage() {
               )}
             </div>
 
-            {/* Social Engagement Rate */}
-            <div className="bg-card rounded-2xl border border-border shadow-sm p-5 flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <span className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                  Social Engagement
-                </span>
-                <span className="font-body text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-                  Sample
-                </span>
-              </div>
-              {socialEngagementLoading ? (
-                <div className="h-10 bg-muted animate-pulse rounded-lg" />
-              ) : mlSocialEngagement ? (
-                <>
-                  <div className="font-heading text-3xl font-bold text-foreground">
-                    {(
-                      mlSocialEngagement.predicted_engagement_rate * 100
-                    ).toFixed(1)}
-                    <span className="font-body text-base font-normal text-muted-foreground">
-                      %
-                    </span>
-                  </div>
-                  <div className="font-body text-xs text-muted-foreground">
-                    Predicted post engagement · connect DB to optimize all posts
-                  </div>
-                </>
-              ) : (
-                <div className="font-body text-xs text-muted-foreground">
-                  ML service offline
-                </div>
-              )}
-            </div>
-
-            {/* Social Causal Boost */}
-            <div className="bg-card rounded-2xl border border-border shadow-sm p-5 flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <span className="font-body text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                  Boost Impact
-                </span>
-                <span className="font-body text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-                  Sample
-                </span>
-              </div>
-              {socialCausalLoading ? (
-                <div className="h-10 bg-muted animate-pulse rounded-lg" />
-              ) : mlSocialCausal ? (
-                <>
-                  <div
-                    className="font-heading text-3xl font-bold"
-                    style={{
-                      color:
-                        mlSocialCausal.estimated_ite > 0
-                          ? C_GREEN
-                          : "hsl(0,72%,51%)",
-                    }}
-                  >
-                    {mlSocialCausal.estimated_ite > 0 ? "+" : ""}
-                    {(mlSocialCausal.estimated_ite * 100).toFixed(1)}
-                    <span className="font-body text-base font-normal text-muted-foreground">
-                      %
-                    </span>
-                  </div>
-                  <div className="font-body text-xs text-muted-foreground">
-                    Est. gift-referral lift from boosting · connect DB to rank
-                    posts worth boosting
-                  </div>
-                </>
-              ) : (
-                <div className="font-body text-xs text-muted-foreground">
-                  ML service offline
-                </div>
-              )}
-            </div>
           </div>
         </div>
       </main>
