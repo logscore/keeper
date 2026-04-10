@@ -1067,7 +1067,7 @@ function CaseloadPage() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
-                  {["Case Code", "Full Name", "Case Category", "Status", "Risk", "Safehouse", "Social Worker", "Admitted", ""].map(
+                  {["Case Code", "Case Category", "Status", "Risk", "Safehouse", "Social Worker", "Admitted", ""].map(
                     (h) => (
                       <TableHead key={h} className="font-body text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                         {h}
@@ -1079,19 +1079,19 @@ function CaseloadPage() {
               <TableBody>
                 {isResidentsLoading ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-16 text-muted-foreground font-body text-sm">
+                    <TableCell colSpan={8} className="text-center py-16 text-muted-foreground font-body text-sm">
                       Loading residents...
                     </TableCell>
                   </TableRow>
                 ) : residentsError ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-16 text-destructive font-body text-sm">
+                    <TableCell colSpan={8} className="text-center py-16 text-destructive font-body text-sm">
                       Failed to load residents. Please refresh.
                     </TableCell>
                   </TableRow>
                 ) : filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-16 text-muted-foreground font-body text-sm">
+                    <TableCell colSpan={8} className="text-center py-16 text-muted-foreground font-body text-sm">
                       No residents match the current filters.
                     </TableCell>
                   </TableRow>
@@ -1104,9 +1104,6 @@ function CaseloadPage() {
                     >
                       <TableCell className="font-body text-sm font-medium text-foreground">
                         {r.resident_code}
-                      </TableCell>
-                      <TableCell className="font-body text-sm text-foreground font-medium">
-                        {r.full_name}
                       </TableCell>
                       <TableCell className="font-body text-sm text-muted-foreground">
                         {r.case_category}
