@@ -96,6 +96,7 @@ function AdminDashboard() {
         <div className="grid lg:grid-cols-3 gap-6 mt-6">
           <div className="lg:col-span-2">
             <CasesTable residents={residents} />
+            <br />
             <DonationTrends donations={donations} />
           </div>
           <div className="flex flex-col h-full">
